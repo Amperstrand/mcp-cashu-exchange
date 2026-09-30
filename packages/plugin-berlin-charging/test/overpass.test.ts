@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_CENTER,
   DEFAULT_RADIUS_KM,
+  OverpassUnavailableError,
   searchStations,
   toRecord,
 } from "../src/overpass.ts";
@@ -35,6 +36,24 @@ const fixture = {
 const fetchWithFixture: typeof fetch = async () =>
   new Response(JSON.stringify(fixture), {
     headers: { "content-type": "application/json" },
+  });
+
+const searchParams = {
+  near: DEFAULT_CENTER,
+  radiusKm: DEFAULT_RADIUS_KM,
+} as const;
+
+const fetchWithPrimaryDown: typeof fetch = async (input) =>
+  String(input).includes("overpass-api.de")
+    ? new Response("error code: 521", { status: 521 })
+    : new Response(JSON.stringify(fixture), {
+        headers: { "content-type": "application/json" },
+      });
+
+const fetchAllDown: typeof fetch = async (input) =>
+  new Response("error code: 521", {
+    status: 521,
+    headers: { "x-endpoint": String(input) },
   });
 
 async function searchFixture() {
@@ -76,6 +95,17 @@ describe("overpass provider", () => {
     const records = await searchFixture();
     expect(records.map((r) => r.id)).not.toContain("osm:node:3");
     expect(records).toHaveLength(2);
+  });
+
+  it("falls back to the mirror when the primary endpoint is down", async () => {
+    const records = await searchStations(searchParams, fetchWithPrimaryDown);
+    expect(records).toHaveLength(2);
+  });
+
+  it("throws OverpassUnavailableError when all endpoints are down", async () => {
+    await expect(
+      searchStations(searchParams, fetchAllDown),
+    ).rejects.toBeInstanceOf(OverpassUnavailableError);
   });
 
   it("omits charging details when only the operator is known", () => {

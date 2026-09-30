@@ -6,7 +6,10 @@ import {
   type DownstreamConfig,
   type ExchangeDeps,
 } from "@exchange/core";
-import { berlinChargingProvider } from "@exchange/plugin-berlin-charging";
+import {
+  berlinChargingProvider,
+  OverpassUnavailableError,
+} from "@exchange/plugin-berlin-charging";
 import { twoFiatCardRail } from "@exchange/plugin-pay-2fiat";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { Hono } from "hono";
@@ -115,12 +118,19 @@ app.get("/api/charging", async (c) => {
   if (!parsed.success) {
     return c.json({ error: "invalid query", issues: parsed.error.issues }, 400);
   }
-  const records = await exchangeDeps(c.env).registry.search({
-    category: "charging",
-    near: { lat: parsed.data.lat, lng: parsed.data.lng },
-    radiusKm: parsed.data.radiusKm,
-  });
-  return c.json({ count: records.length, records });
+  try {
+    const records = await exchangeDeps(c.env).registry.search({
+      category: "charging",
+      near: { lat: parsed.data.lat, lng: parsed.data.lng },
+      radiusKm: parsed.data.radiusKm,
+    });
+    return c.json({ count: records.length, records });
+  } catch (error) {
+    if (error instanceof OverpassUnavailableError) {
+      return c.json({ error: error.message }, 502);
+    }
+    throw error;
+  }
 });
 
 export default app;

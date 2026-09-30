@@ -6,6 +6,8 @@ import {
   searchStations,
 } from "./overpass.ts";
 
+export { OverpassUnavailableError } from "./overpass.ts";
+
 /**
  * Berlin EV charging, sourced live from OpenStreetMap via Overpass.
  * Discovery only for now: payment happens at the operator (card rail),

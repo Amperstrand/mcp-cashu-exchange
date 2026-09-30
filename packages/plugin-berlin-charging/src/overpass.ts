@@ -7,7 +7,18 @@ import { z } from "zod";
 export const DEFAULT_CENTER: GeoPoint = { lat: 52.52, lng: 13.405 };
 export const DEFAULT_RADIUS_KM = 5;
 
-const OVERPASS_ENDPOINT = "https://overpass-api.de/api/interpreter";
+const OVERPASS_ENDPOINTS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+] as const;
+
+/** Typed upstream failure: all Overpass endpoints unavailable or unhealthy. */
+export class OverpassUnavailableError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "OverpassUnavailableError";
+  }
+}
 
 const OverpassElement = z.object({
   type: z.enum(["node", "way", "relation"]),
@@ -28,6 +39,30 @@ export interface OverpassSearchParams {
 }
 
 type FetchImpl = typeof fetch;
+
+function retryable(error: unknown): boolean {
+  return (
+    error instanceof TypeError || // network failure
+    error instanceof SyntaxError || // non-JSON error body (e.g. HTML error page)
+    error instanceof OverpassUnavailableError
+  );
+}
+
+async function queryEndpoint(
+  endpoint: string,
+  query: string,
+  fetchImpl: FetchImpl,
+): Promise<unknown> {
+  const response = await fetchImpl(endpoint, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: `data=${encodeURIComponent(query)}`,
+  });
+  if (!response.ok) {
+    throw new OverpassUnavailableError(`${endpoint} → HTTP ${response.status}`);
+  }
+  return response.json();
+}
 
 function buildQuery(params: OverpassSearchParams): string {
   const radiusM = Math.round(params.radiusKm * 1000);
@@ -98,14 +133,20 @@ export async function searchStations(
   fetchImpl: FetchImpl = fetch,
 ): Promise<readonly ServiceRecord[]> {
   const query = buildQuery(params);
-  const response = await fetchImpl(OVERPASS_ENDPOINT, {
-    method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: `data=${encodeURIComponent(query)}`,
-  });
-  const payload: unknown = await response.json();
-  const parsed = OverpassResponse.parse(payload);
-  return parsed.elements
-    .map(toRecord)
-    .filter((record): record is ServiceRecord => record !== undefined);
+  let lastRetryable: unknown;
+  for (const endpoint of OVERPASS_ENDPOINTS) {
+    try {
+      const payload = await queryEndpoint(endpoint, query, fetchImpl);
+      const parsed = OverpassResponse.parse(payload);
+      return parsed.elements
+        .map(toRecord)
+        .filter((record): record is ServiceRecord => record !== undefined);
+    } catch (error) {
+      if (!retryable(error)) throw error;
+      lastRetryable = error;
+    }
+  }
+  throw lastRetryable instanceof OverpassUnavailableError
+    ? lastRetryable
+    : new OverpassUnavailableError("all Overpass endpoints failed");
 }
