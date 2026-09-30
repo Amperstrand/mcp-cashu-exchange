@@ -1,0 +1,12 @@
+# Copy to .dev.vars (gitignored). NEVER commit real values — this repo is public.
+# Production values go in `wrangler secret put` / GitHub Actions secrets.
+
+# 2fiat prepaid Mastercard (the "card" payment rail).
+# Only set when demoing agent-driven checkout; leave empty otherwise.
+TWOFIAT_CARD_PAN=
+TWOFIAT_CARD_EXP=MM/YY
+TWOFIAT_CARD_CVC=
+
+# Federated downstream MCP servers (JSON array; tokens live in per-name secrets).
+# Example: [{"name":"oda-mcp","url":"https://oda-mcp.example.workers.dev/mcp"}]
+DOWNSTREAMS=

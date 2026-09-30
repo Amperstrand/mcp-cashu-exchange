@@ -1,0 +1,11 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "mcp-cashu-exchange",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-22",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "public"
+  },
+  "routes": [{ "pattern": "mcp.cashu.exchange", "custom_domain": true }]
+}

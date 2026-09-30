@@ -1,0 +1,29 @@
+{
+  "name": "mcp-cashu-exchange",
+  "version": "0.0.1",
+  "private": true,
+  "description": "mcp.cashu.exchange — a modular MCP service exchange: registry, gateway, and payment rails for payable services (charging, food, and more).",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check": "biome check .",
+    "dev": "wrangler dev --config apps/worker/wrangler.jsonc",
+    "deploy": "wrangler deploy --config apps/worker/wrangler.jsonc"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.0.0",
+    "@cloudflare/workers-types": "^5.20260926.1",
+    "typescript": "^5.6.0",
+    "vitest": "^3.0.0",
+    "wrangler": "^4.0.0"
+  }
+}

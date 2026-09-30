@@ -1,0 +1,11 @@
+{
+  "name": "@exchange/plugin-pay-2fiat",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "@exchange/contracts": "0.0.1"
+  }
+}

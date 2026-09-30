@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022"],
+    "types": ["@cloudflare/workers-types"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "noFallthroughCasesInSwitch": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "paths": {
+      "@exchange/contracts": ["./packages/contracts/src/index.ts"],
+      "@exchange/core": ["./packages/core/src/index.ts"],
+      "@exchange/plugin-berlin-charging": [
+        "./packages/plugin-berlin-charging/src/index.ts"
+      ],
+      "@exchange/plugin-pay-2fiat": ["./packages/plugin-pay-2fiat/src/index.ts"]
+    }
+  },
+  "include": ["packages/*/src", "packages/*/test", "apps/worker/src"]
+}
