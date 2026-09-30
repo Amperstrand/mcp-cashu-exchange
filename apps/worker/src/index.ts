@@ -10,11 +10,22 @@ import {
   berlinChargingProvider,
   OverpassUnavailableError,
 } from "@exchange/plugin-berlin-charging";
+import { cinemaProvider, FILMS } from "@exchange/plugin-cinema";
 import { twoFiatCardRail } from "@exchange/plugin-pay-2fiat";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { Hono } from "hono";
 import { z } from "zod";
 import { withKvCache } from "./cached-provider.ts";
+import { settleOffer, ticketCode } from "./cashu-settle.ts";
+import {
+  ChatRequest,
+  clearPendingOffer,
+  handleChat,
+  type PayReply,
+  PayRequest,
+  type PendingOffer,
+  pendingOfferFor,
+} from "./chat.ts";
 
 export interface Env {
   readonly CACHE: KVNamespace;
@@ -69,7 +80,7 @@ function exchangeDeps(env: Env): ExchangeDeps {
   const card = cardFromEnv(env);
   const charging = withKvCache(berlinChargingProvider(), env.CACHE, 600);
   return {
-    registry: createRegistry([charging]),
+    registry: createRegistry([charging, cinemaProvider()]),
     rails: card === undefined ? [] : [twoFiatCardRail(card)],
     downstreams: parseDownstreams(env.DOWNSTREAMS),
     ...(card === undefined ? {} : { card }),
@@ -134,6 +145,104 @@ app.get("/api/charging", async (c) => {
     }
     throw error;
   }
+});
+
+/**
+ * Demo cinema chat agent (hackathon). Keyword-regex intents over the
+ * synthetic cinema catalog; Cashu ecash settlement for the offer.
+ * Pending offers live in KV (multi-isolate safe); the in-memory map in
+ * chat.ts stays as the same-isolate fast path. NOT part of the MCP surface.
+ */
+const PendingOfferStored = z.object({
+  offer_id: z.string(),
+  title: z.string(),
+  amount_sats: z.number().int().positive(),
+  memo: z.string(),
+  filmTitle: z.string(),
+  showtime: z.string(),
+  qty: z.number().int().positive(),
+});
+
+type StoredOffer = z.infer<typeof PendingOfferStored>;
+
+const OFFER_TTL_SECONDS = 900;
+
+function offerKey(sessionId: string): string {
+  return `chat:v1:offer:${sessionId}`;
+}
+
+async function persistOffer(
+  cache: KVNamespace,
+  session: string,
+  offer: PendingOffer,
+): Promise<void> {
+  await cache.put(offerKey(session), JSON.stringify(offer), {
+    expirationTtl: OFFER_TTL_SECONDS,
+  });
+}
+
+/** Same-isolate memory first, then KV — pending offers survive isolate switches. */
+async function resolveOffer(
+  cache: KVNamespace,
+  session: string,
+  offerId: string,
+): Promise<StoredOffer | undefined> {
+  const remembered = pendingOfferFor(session, offerId);
+  if (remembered !== undefined) return remembered;
+  const raw = await cache.get(offerKey(session));
+  if (raw === null) return undefined;
+  const parsed = PendingOfferStored.safeParse(JSON.parse(raw));
+  return parsed.success && parsed.data.offer_id === offerId
+    ? parsed.data
+    : undefined;
+}
+
+app.post("/api/chat", async (c) => {
+  const parsed = ChatRequest.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) {
+    return c.json({ error: "invalid body", issues: parsed.error.issues }, 400);
+  }
+  const reply = handleChat(FILMS, parsed.data);
+  if (reply.offer !== null) {
+    const stored = pendingOfferFor(parsed.data.session, reply.offer.offer_id);
+    if (stored !== undefined) {
+      await persistOffer(c.env.CACHE, parsed.data.session, stored);
+    }
+  }
+  return c.json(reply);
+});
+
+app.post("/api/chat/pay", async (c) => {
+  const parsed = PayRequest.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) {
+    return c.json({ error: "invalid body", issues: parsed.error.issues }, 400);
+  }
+  const { session, offer_id, token } = parsed.data;
+  const offer = await resolveOffer(c.env.CACHE, session, offer_id);
+  if (offer === undefined) {
+    return c.json({
+      reply:
+        "I don't have a pending offer with that id for this session. " +
+        "Ask me what's playing and pick a film first.",
+      tickets: [],
+      error: "no pending offer",
+    } satisfies PayReply);
+  }
+  const result = await settleOffer(offer, token);
+  if (!result.ok) {
+    return c.json({
+      reply: `Payment failed — ${result.detail}. Nothing was booked; your offer is still open if you want to try another token.`,
+      tickets: [],
+      error: result.detail,
+    } satisfies PayReply);
+  }
+  clearPendingOffer(session);
+  await c.env.CACHE.delete(offerKey(session));
+  const tickets = Array.from({ length: offer.qty }, () => ticketCode());
+  return c.json({
+    reply: `Booked! ${offer.qty} ticket${offer.qty === 1 ? "" : "s"} for ${offer.filmTitle} at ${offer.showtime} — redeemed ${result.redeemedSats} sat. Your ticket codes: ${tickets.join(", ")}. Enjoy the film!`,
+    tickets,
+  } satisfies PayReply);
 });
 
 export default app;

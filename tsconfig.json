@@ -19,6 +19,7 @@
       "@exchange/plugin-berlin-charging": [
         "./packages/plugin-berlin-charging/src/index.ts"
       ],
+      "@exchange/plugin-cinema": ["./packages/plugin-cinema/src/index.ts"],
       "@exchange/plugin-pay-2fiat": ["./packages/plugin-pay-2fiat/src/index.ts"]
     }
   },

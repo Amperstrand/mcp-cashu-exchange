@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>mcp.cashu.exchange — service map</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <style>
+      html, body { margin: 0; height: 100%; font-family: system-ui, sans-serif; }
+      #map { height: 100%; }
+      #panel {
+        position: absolute; top: 10px; right: 10px; z-index: 1000;
+        background: white; padding: 10px 14px; border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,.2); max-width: 280px; font-size: 13px;
+      }
+      #panel h1 { font-size: 15px; margin: 0 0 6px; }
+      #panel code { background: #f1f1f1; padding: 1px 4px; border-radius: 4px; }
+      #panel button { margin-top: 8px; width: 100%; }
+      .leaflet-popup-content { font-size: 13px; }
+    </style>
+  </head>
+  <body>
+    <div id="panel">
+      <h1>mcp.cashu.exchange</h1>
+      <a href="/">chat</a><br />
+      <span id="status">loading services…</span><br />
+      <code>POST /mcp</code> — MCP endpoint<br />
+      <button id="locate">Search near me</button>
+    </div>
+    <div id="map"></div>
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script>
+      const BERLIN = [52.52, 13.405];
+      const map = L.map("map").setView(BERLIN, 12);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap contributors",
+      }).addTo(map);
+      const status = document.getElementById("status");
+      const layer = L.layerGroup().addTo(map);
+
+      async function loadStations(lat, lng) {
+        status.textContent = "loading chargers…";
+        layer.clearLayers();
+        const res = await fetch(`/api/charging?lat=${lat}&lng=${lng}&radiusKm=10`);
+        const data = await res.json();
+        for (const r of data.records ?? []) {
+          if (!r.location) continue;
+          L.marker([r.location.lat, r.location.lng])
+            .addTo(layer)
+            .bindPopup(
+              `<b>${r.name}</b><br/>${r.address ?? ""}<br/><em>OSM ${r.id}</em>`,
+            );
+        }
+        status.textContent = `${data.count ?? 0} chargers (10 km)`;
+      }
+
+      fetch("/api/services")
+        .then((r) => r.json())
+        .then((d) => {
+          const names = (d.providers ?? []).map((p) => p.displayName).join(", ");
+          status.textContent = names || "no providers";
+        })
+        .then(() => loadStations(BERLIN[0], BERLIN[1]));
+
+      document.getElementById("locate").addEventListener("click", () => {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            map.setView([pos.coords.latitude, pos.coords.longitude], 13);
+            loadStations(pos.coords.latitude, pos.coords.longitude);
+          },
+          () => {
+            status.textContent = "geolocation denied";
+          },
+        );
+      });
+    </script>
+  </body>
+</html>

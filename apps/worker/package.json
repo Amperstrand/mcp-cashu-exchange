@@ -4,9 +4,11 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@cashu/cashu-ts": "^4.11.0",
     "@exchange/contracts": "0.0.1",
     "@exchange/core": "0.0.1",
     "@exchange/plugin-berlin-charging": "0.0.1",
+    "@exchange/plugin-cinema": "0.0.1",
     "@exchange/plugin-pay-2fiat": "0.0.1",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "hono": "^4.0.0",
