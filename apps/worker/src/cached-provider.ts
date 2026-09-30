@@ -1,7 +1,9 @@
-import type {
-  SearchQuery,
-  ServiceProvider,
-  ServiceRecord,
+import {
+  providerId,
+  SERVICE_CATEGORIES,
+  type SearchQuery,
+  type ServiceProvider,
+  serviceId,
 } from "@exchange/contracts";
 import { z } from "zod";
 
@@ -17,7 +19,7 @@ const ChargingDetails = z.object({
 const ServiceRecordSchema = z.object({
   id: z.string(),
   providerId: z.string(),
-  category: z.string(),
+  category: z.enum(SERVICE_CATEGORIES),
   name: z.string(),
   location: GeoPoint.optional(),
   address: z.string().optional(),
@@ -47,7 +49,13 @@ export function withKvCache(
       const raw = await cache.get(key);
       if (raw !== null) {
         const parsed = CachedRecords.safeParse(JSON.parse(raw));
-        if (parsed.success) return parsed.data;
+        if (parsed.success) {
+          return parsed.data.map((record) => ({
+            ...record,
+            id: serviceId(record.id),
+            providerId: providerId(record.providerId),
+          }));
+        }
       }
       const records = await inner.search(query);
       await cache.put(key, JSON.stringify(records), {
