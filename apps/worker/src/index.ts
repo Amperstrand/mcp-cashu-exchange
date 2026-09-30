@@ -14,8 +14,10 @@ import { twoFiatCardRail } from "@exchange/plugin-pay-2fiat";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { Hono } from "hono";
 import { z } from "zod";
+import { withKvCache } from "./cached-provider.ts";
 
 export interface Env {
+  readonly CACHE: KVNamespace;
   readonly TWOFIAT_CARD_PAN?: string;
   readonly TWOFIAT_CARD_EXP?: string;
   readonly TWOFIAT_CARD_CVC?: string;
@@ -65,8 +67,9 @@ function cardFromEnv(env: Env): CardCredentials | undefined {
 
 function exchangeDeps(env: Env): ExchangeDeps {
   const card = cardFromEnv(env);
+  const charging = withKvCache(berlinChargingProvider(), env.CACHE, 600);
   return {
-    registry: createRegistry([berlinChargingProvider()]),
+    registry: createRegistry([charging]),
     rails: card === undefined ? [] : [twoFiatCardRail(card)],
     downstreams: parseDownstreams(env.DOWNSTREAMS),
     ...(card === undefined ? {} : { card }),
