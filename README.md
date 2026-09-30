@@ -7,6 +7,14 @@ real-world services.
 
 **Live:** <https://mcp.cashu.exchange> · MCP endpoint: `POST https://mcp.cashu.exchange/mcp`
 
+| Route | What |
+|---|---|
+| `/` → `/demo` | redirects to the flagship chat demo at **chat.cashu.exchange** |
+| `/berlin` | Berlin cinema box-office chat (Cashu-settled, Yorck programme) |
+| `/map.html` | Leaflet map of Berlin EV chargers (OSM/Overpass, KV-cached) |
+| `POST /mcp` | MCP server (streamable HTTP, stateless) |
+| `GET /api/services` · `/api/charging` | JSON surfaces for the map/other clients |
+
 ## The idea
 
 An *exchange*, not a monolith. Three moving pieces:
