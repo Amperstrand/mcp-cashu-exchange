@@ -84,6 +84,28 @@ Worker runtime secrets (`wrangler secret put`, per-name):
 4. `payment.card_details` exists for agent-driven checkout demos. When the
    card is not configured, the tool is not registered at all.
 
+## Publication & leak policy
+
+What may be public: contracts/types, synthetic fixtures (inline in tests, with
+a provenance comment), architecture, infrastructure config that carries no
+credential material.
+
+What never enters this repo:
+
+- **Card numbers, license plates, phone numbers, tokens, cookies, session
+  captures** — in code, fixtures, docs, or comments.
+- **Captured/sample payloads.** `**/fixtures/captures/`, `**/captures/`,
+  `*.har`, `*.pcap` are gitignored. If a test needs a response shape, write a
+  synthetic fixture and say so in a comment.
+- **Reverse-engineered API knowledge stays in private kits** — this repo
+  consumes it over MCP (the gateway), it does not vendor it.
+
+Enforcement: `node scripts/leak-scan.mjs . --history` runs in CI on every PR
+and push — PAN (Luhn-validated), Norwegian/German plates, phones, JWTs, Cashu
+tokens, GitHub tokens, secret-shaped key/value pairs. Exceptions live in
+`scripts/leak-scan-allowlist.txt` and **require a `# because:` justification**
+line above each entry; unjustified entries fail the build.
+
 ## Adding a component
 
 - **New provider** → new package implementing `ServiceProvider`, register it in

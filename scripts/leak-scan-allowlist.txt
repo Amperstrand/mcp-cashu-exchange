@@ -1,0 +1,3 @@
+# Leak-scan allowlist. Every entry REQUIRES a "# because:" line directly
+# above it. Entries are rule:path-prefix. Anything here is a conscious,
+# reviewable exception — not a way to make findings disappear quietly.

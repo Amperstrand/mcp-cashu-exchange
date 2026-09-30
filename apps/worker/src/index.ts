@@ -33,6 +33,8 @@ export interface Env {
   readonly TWOFIAT_CARD_EXP?: string;
   readonly TWOFIAT_CARD_CVC?: string;
   readonly DOWNSTREAMS?: string;
+  /** Must be "true" for payment.card_details (full PAN) to register at all. */
+  readonly EXPOSE_CARD_DETAILS?: string;
 }
 
 const DownstreamsVar = z.array(
@@ -83,7 +85,9 @@ function exchangeDeps(env: Env): ExchangeDeps {
     registry: createRegistry([charging, cinemaProvider()]),
     rails: card === undefined ? [] : [twoFiatCardRail(card)],
     downstreams: parseDownstreams(env.DOWNSTREAMS),
-    ...(card === undefined ? {} : { card }),
+    ...(card !== undefined && env.EXPOSE_CARD_DETAILS === "true"
+      ? { card }
+      : {}),
   };
 }
 

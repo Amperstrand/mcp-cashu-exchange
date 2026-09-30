@@ -14,6 +14,8 @@ jobs:
         with:
           node-version: 24
       - run: npm ci
+      - name: Leak gate (publication policy)
+        run: node scripts/leak-scan.mjs . --history
       - run: npx biome check .
       - run: npm run typecheck
       - run: npm test

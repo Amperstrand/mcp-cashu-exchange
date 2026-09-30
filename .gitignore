@@ -5,3 +5,10 @@ dist/
 *.log
 coverage/
 .DS_Store
+
+# Captured/sample payloads — never committed (publication policy).
+# Synthetic fixtures live inline in tests with a provenance comment.
+**/fixtures/captures/
+**/captures/
+**/*.har
+**/*.pcap
