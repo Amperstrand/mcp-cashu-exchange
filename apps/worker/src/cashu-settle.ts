@@ -33,10 +33,24 @@ export type ReceiveFn = (token: string) => Promise<number>;
 
 /** Production receiver: redeem the token at the accepted mint, unit sat. */
 export const receiveViaMint: ReceiveFn = async (token) => {
-  const wallet = new Wallet(new Mint(ACCEPTED_MINT), { unit: "sat" });
-  await wallet.loadMint();
-  const proofs = await wallet.receive(token);
-  return proofs.reduce((sum, p) => sum + p.amount.toNumber(), 0);
+  // cashu-ts sends the WHATWG default `redirect: "error"` on its mint
+  // requests, which Cloudflare's workerd runtime rejects outright
+  // ("Invalid redirect value, must be one of follow or manual"). Rewrite it
+  // to "follow" for the duration of the receive call, then restore.
+  const nativeFetch = globalThis.fetch;
+  globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) =>
+    nativeFetch(input, {
+      ...init,
+      redirect: init?.redirect === "error" ? "follow" : init?.redirect,
+    })) as typeof globalThis.fetch;
+  try {
+    const wallet = new Wallet(new Mint(ACCEPTED_MINT), { unit: "sat" });
+    await wallet.loadMint();
+    const proofs = await wallet.receive(token);
+    return proofs.reduce((sum, p) => sum + p.amount.toNumber(), 0);
+  } finally {
+    globalThis.fetch = nativeFetch;
+  }
 };
 
 /**
