@@ -5,6 +5,13 @@
  */
 export const CATALOG = [
   {
+    id: "europark-mcp",
+    role: "provider",
+    name: "europark parking (federated)",
+    url: "https://parking-mcp.cashu.exchange/mcp",
+    note: "EasyPark-backed parking zones (Germany + more): search and details via the gateway. Start/stop parking stays auth-gated in the private kit.",
+  },
+  {
     id: "pecan",
     role: "settlement",
     name: "Pecan — alternative-numeraire settlement",
