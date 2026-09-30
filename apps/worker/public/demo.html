@@ -29,6 +29,13 @@
       header h1 b { color: var(--accent); }
       header a { color: var(--muted); font-size: 13px; text-decoration: none; }
       header a:hover { color: var(--text); }
+      header .sub { color: var(--muted); font-weight: 400; font-size: 13px; }
+      .programme {
+        align-self: flex-start; font-size: 11px; letter-spacing: 0.08em;
+        text-transform: uppercase; color: var(--accent);
+        border: 1px solid var(--accent); border-radius: 999px; padding: 3px 10px;
+        margin-bottom: 2px;
+      }
       #log {
         flex: 1; overflow-y: auto; padding: 18px;
         display: flex; flex-direction: column; gap: 10px;
@@ -72,13 +79,13 @@
   </head>
   <body>
     <header>
-      <h1><b>mcp</b>.cashu.exchange</h1>
+      <h1><b>mcp</b>.cashu.exchange <span class="sub">/demo</span></h1>
       <a href="/map.html">map</a>
       <a href="https://github.com/Amperstrand/mcp-cashu-exchange">github</a>
     </header>
     <div id="log"></div>
     <form id="composer">
-      <input id="message" placeholder="Ask what's playing… (e.g. 2 tickets for The Mint at 20:15)" autocomplete="off" autofocus />
+      <input id="message" placeholder='e.g. "2 tickets for Vaterland"' autocomplete="off" autofocus />
       <button type="submit">Send</button>
     </form>
     <script>
@@ -169,10 +176,15 @@
       }
 
       addMsg(
-        "Hi! I'm the mcp.cashu.exchange box office. Ask me what's playing, " +
-          "then pick a film — you pay in Cashu ecash, I hand you ticket codes.",
+        "Hi! I'm the mcp.cashu.exchange box office for tonight's real Berlin " +
+          "cinema programme (Yorck). Ask me what's playing, name a film — " +
+          "you pay in Cashu ecash, I hand you ticket codes.",
         "bot",
       );
+      const tag = document.createElement("div");
+      tag.className = "programme";
+      tag.textContent = "Real programme · yorck.de · Berlin tonight";
+      log.appendChild(tag);
 
       // Demo autostart: the listing appears on load, no interaction needed.
       send("what's playing today?");

@@ -3,21 +3,37 @@ import { providerId, serviceId } from "@exchange/contracts";
 
 const CINEMA_PROVIDER_ID = providerId("cinema");
 
-/** Synthetic film entry: title, today's showtimes, and per-ticket price in sats. */
+/** Film entry: title, today's showtimes, per-ticket price in sats, optional cinema. */
 export interface Film {
   readonly title: string;
   readonly showtimes: readonly string[];
   readonly priceSats: number;
+  readonly cinema?: string;
 }
 
 /**
- * Hackathon demo catalog — fully synthetic, three themed films.
- * Prices are intentionally tiny (signet sats) so demo wallets can afford them.
+ * Real programme — tonight's Yorck screenings in Berlin (captured from
+ * yorck.de, 2026-09-30 evening shows only). Prices are demo-mint sats.
  */
 export const FILMS: readonly Film[] = [
-  { title: "Signal Lost", showtimes: ["19:30", "21:45"], priceSats: 12 },
-  { title: "The Mint", showtimes: ["18:00", "20:15"], priceSats: 9 },
-  { title: "Cash Only", showtimes: ["17:10", "22:00"], priceSats: 7 },
+  {
+    title: "Primetime",
+    cinema: "Filmtheater am Friedrichshain",
+    showtimes: ["20:40"],
+    priceSats: 20,
+  },
+  {
+    title: "Vaterland",
+    cinema: "Delphi Filmpalast",
+    showtimes: ["20:20"],
+    priceSats: 18,
+  },
+  {
+    title: "Das geträumte Abenteuer",
+    cinema: "Kant Kino",
+    showtimes: ["19:30"],
+    priceSats: 15,
+  },
 ];
 
 function filmToRecord(film: Film): ServiceRecord {
@@ -30,21 +46,21 @@ function filmToRecord(film: Film): ServiceRecord {
     name: film.title,
     details: {
       kind: "generic",
-      note: `Showtimes today: ${film.showtimes.join(", ")} · ${film.priceSats} sat per ticket`,
+      note: `${film.cinema ?? "Berlin"} · today ${film.showtimes.join(", ")} · ${film.priceSats} sat per ticket`,
     },
   };
 }
 
 /**
- * Synthetic cinema box-office provider (category "shopping").
- * Discovery + honest details only; payment is settled by the chat layer via
- * Cashu ecash, not by this provider. All data is fixture — no real cinema.
+ * Cinema box-office provider (category "shopping") over the real Berlin
+ * programme. Discovery + details only; payment is settled by the chat
+ * layer via Cashu ecash, not by this provider.
  */
 export function cinemaProvider(): ServiceProvider {
   return {
     id: CINEMA_PROVIDER_ID,
     category: "shopping",
-    displayName: "Demo Cinema (synthetic box office)",
+    displayName: "Berlin cinema tonight (Yorck programme)",
     search: async (query) => {
       const text = query.text?.toLowerCase();
       return FILMS.map(filmToRecord).filter(

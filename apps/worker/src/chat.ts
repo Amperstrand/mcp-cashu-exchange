@@ -63,6 +63,7 @@ export interface ChatFilm {
   readonly title: string;
   readonly showtimes: readonly string[];
   readonly priceSats: number;
+  readonly cinema?: string;
 }
 
 function getSession(id: string): SessionState {
@@ -75,11 +76,11 @@ function getSession(id: string): SessionState {
 }
 
 function listingReply(films: readonly ChatFilm[]): string {
-  const lines = films.map(
-    (f) =>
-      `• ${f.title} — ${f.showtimes.join(", ")} · ${f.priceSats} sat/ticket`,
-  );
-  return `Today's screenings:\n${lines.join("\n")}\n\nName a film (and optionally a time and how many tickets) and I'll make you a Cashu offer.`;
+  const lines = films.map((f) => {
+    const where = f.cinema === undefined ? "" : ` @ ${f.cinema}`;
+    return `• ${f.title}${where} — ${f.showtimes.join(", ")} · ${f.priceSats} sat/ticket`;
+  });
+  return `Tonight in Berlin:\n${lines.join("\n")}\n\nName a film (and how many tickets) and I'll make you a Cashu offer.`;
 }
 
 function matchFilm(

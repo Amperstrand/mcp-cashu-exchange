@@ -2,14 +2,14 @@ import { describe, expect, it } from "vitest";
 import { cinemaProvider, FILMS } from "../src/index.ts";
 
 describe("cinema provider", () => {
-  it("lists all three synthetic films on a blank search", async () => {
+  it("lists tonight's real Berlin films on a blank search", async () => {
     const provider = cinemaProvider();
     const records = await provider.search({ category: "shopping" });
     expect(records).toHaveLength(3);
     expect(records.map((r) => r.name)).toEqual([
-      "Signal Lost",
-      "The Mint",
-      "Cash Only",
+      "Primetime",
+      "Vaterland",
+      "Das geträumte Abenteuer",
     ]);
   });
 
@@ -27,18 +27,18 @@ describe("cinema provider", () => {
     const provider = cinemaProvider();
     const records = await provider.search({
       category: "shopping",
-      text: "mint",
+      text: "abenteuer",
     });
-    expect(records.map((r) => r.name)).toEqual(["The Mint"]);
+    expect(records.map((r) => r.name)).toEqual(["Das geträumte Abenteuer"]);
   });
 
-  it("carries showtimes and price in the generic details note", async () => {
+  it("carries cinema, showtimes and price in the generic details note", async () => {
     const provider = cinemaProvider();
     const records = await provider.search({ category: "shopping" });
-    const signalLost = records.find((r) => r.name === "Signal Lost");
-    expect(signalLost?.details).toEqual({
+    const primetime = records.find((r) => r.name === "Primetime");
+    expect(primetime?.details).toEqual({
       kind: "generic",
-      note: "Showtimes today: 19:30, 21:45 · 12 sat per ticket",
+      note: "Filmtheater am Friedrichshain · today 20:40 · 20 sat per ticket",
     });
   });
 
