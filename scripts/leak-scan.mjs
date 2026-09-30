@@ -30,6 +30,12 @@ const TEXT_EXT =
 function luhnValid(raw) {
   const digits = raw.replace(/[^\d]/g, "");
   if (digits.length < 13 || digits.length > 19) return false;
+  // Epoch-ms heuristic: 13-digit runs in the unix-millisecond range are
+  // timestamps, not PANs (Luhn passes on ~10% of them by chance).
+  if (digits.length === 13) {
+    const asNumber = Number(digits);
+    if (asNumber > 9e11 && asNumber < 4e12) return false;
+  }
   let sum = 0;
   let dbl = false;
   for (let i = digits.length - 1; i >= 0; i -= 1) {
@@ -46,9 +52,13 @@ function luhnValid(raw) {
 
 const PLACEHOLDER =
   /^(x{3,}|\*{3,}|<[^>]+>|\$\{[^}]+\}|changeme|change-me|example.*|placeholder.*|your[-_].*|0+|\d)$/i;
+
+const UUID_LIKE =
+  /\b[0-9a-fA-F]{4,}-[0-9a-fA-F]{4,}-[0-9a-fA-F]{4,}(?:-[0-9a-fA-F]{4,})?\b/g;
 const ENV_REFERENCE = /^[A-Z][A-Z0-9_]*$/;
 
-function isSecretishValue(value) {
+function isSecretishValue(raw) {
+  const value = raw.trim();
   if (PLACEHOLDER.test(value)) return false;
   if (ENV_REFERENCE.test(value)) return false;
   if (/^(true|false|off|on|none|null)$/i.test(value)) return false;
@@ -60,6 +70,7 @@ const RULES = [
     id: "pan",
     why: "credit card number (Luhn-valid)",
     regex: /\b(?:\d[ -]?){13,19}\b/g,
+    prepare: UUID_LIKE,
     accept: (match) => luhnValid(match),
   },
   {
@@ -155,12 +166,14 @@ function secretValueOf(line) {
 
 function* scanLine(line) {
   for (const rule of RULES) {
+    const prepared =
+      rule.prepare === undefined ? line : line.replace(rule.prepare, " ");
     rule.regex.lastIndex = 0;
-    const matches = line.match(rule.regex);
+    const matches = prepared.match(rule.regex);
     if (matches === null) continue;
     for (const match of matches) {
       if (rule.id === "secret-key") {
-        const value = secretValueOf(line);
+        const value = secretValueOf(prepared);
         if (value === null || !isSecretishValue(value)) continue;
       } else if (rule.accept !== undefined && !rule.accept(match)) {
         continue;
