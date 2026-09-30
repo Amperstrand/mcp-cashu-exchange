@@ -17,6 +17,7 @@
     "test": "vitest run",
     "check": "biome check .",
     "dev": "wrangler dev --config apps/worker/wrangler.jsonc",
+    "predeploy": "test -z \"$(git status --porcelain)\" || (echo 'REFUSING: uncommitted changes — commit before deploying' && exit 1)",
     "deploy": "wrangler deploy --config apps/worker/wrangler.jsonc"
   },
   "devDependencies": {
