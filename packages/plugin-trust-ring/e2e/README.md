@@ -29,7 +29,7 @@ Every value displayed comes from executing the real `src/*.ts` modules in the br
 | `dist/trust-ring.bundle.js` | Bundled IIFE (real source + @noble/curves + @noble/hashes, ~99KB, committed) |
 | `record.py` | Playwright script: opens harness, runs beats, asserts, records video |
 | `record-run.sh` | One-shot: clears stale videos, records, converts to mp4, probes the result |
-| `trust-ring-happy-path.mp4` | Recorded video (H.264, 1280×720, ~55s) — gitignored; the copy of record lives in `~/reports/mcp-cashu-trust-ring/` |
+| `trust-ring-happy-path.mp4` | Recorded walkthrough (H.264, 1280×720, ~55s, 1.6MB) — committed |
 | `videos/` | Raw webm captured by Playwright — gitignored |
 
 ## Rebuild the bundle

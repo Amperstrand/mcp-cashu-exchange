@@ -28,4 +28,4 @@ cookies.txt
 !packages/plugin-trust-ring/e2e/dist/
 !packages/plugin-trust-ring/e2e/dist/trust-ring.bundle.js
 packages/plugin-trust-ring/e2e/videos/
-packages/plugin-trust-ring/e2e/*.mp4
+# the recorded walkthrough IS committed (<5MB) — it is the deliverable Amperstrand watches
