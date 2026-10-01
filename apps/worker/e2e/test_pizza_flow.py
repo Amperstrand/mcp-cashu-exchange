@@ -41,6 +41,7 @@ VIDEO_DIR = HERE / "videos"
 REPORT_DIR = Path("/home/c03rad0r/reports/mcp-cashu-pizza")
 FINAL_MP4 = REPORT_DIR / "pizza-e2e-check.mp4"   # NOT the deliverable name — see record_demo.py
 CHROME = "/usr/bin/google-chrome-stable"
+MINT = "https://cdk-a056e0f.cashu.exchange"   # the mint apps/worker/src/cashu-settle.ts accepts
 PORT = 8791
 CDP_PORT = 9334
 VIEWPORT = {"width": 1280, "height": 860}
@@ -145,18 +146,49 @@ def main():
                   ru["first"] is True and ru["second"] is False,
                   f"first={ru['first']} second={ru['second']} reason={ru.get('reason')!r}")
 
-            # ── payment + lifecycle ──────────────────────────────────────────
+            # ── payment: a REAL mint quote, requested through the trust gate ──
             buyer.click("#go-pay")
-            buyer.click("#pay-confirm")
-            paid = buyer.evaluate("() => window.__buyer.paymentConfirmed === true "
-                                  "&& window.__buyer.paymentSimulated === true")
-            check("payment step runs and is flagged SIMULATED (no node in demo)", paid)
-            for st in ("accepted", "preparing", "delivery", "delivered"):
-                fac.click(f'[data-status="{st}"]')
-                fac.wait_for_timeout(150)
-            buyer.wait_for_timeout(400)
-            track = buyer.evaluate("() => document.querySelectorAll('#timeline .step.done, #timeline .step.now').length")
-            check("order lifecycle advances through all 5 stages", track >= 4, f"{track} stages lit")
+            buyer.wait_for_function(
+                "() => window.__buyer.realQuote !== null || window.__buyer.gateReason !== null",
+                timeout=25000)
+            inv = buyer.evaluate("() => window.__buyer.realQuote")
+            net = buyer.evaluate("() => window.__buyer.invoiceNetwork")
+            check("a REAL invoice is issued by the mint",
+                  bool(inv and inv.get("request")),
+                  f"state={inv.get('state') if inv else None} network={net}")
+            check("invoice is a signet BOLT11 for the exact order amount",
+                  net == "signet" and inv is not None
+                  and str(inv.get("request", "")).startswith("lntbs")
+                  and str(inv.get("amount")) == "27900",
+                  f"{str(inv.get('request',''))[:22]}… amount={inv.get('amount') if inv else None}")
+
+            # independent check: ask the mint ourselves, from the test process
+            live = None
+            try:
+                # Cloudflare-fronted mints 403 urllib's default UA — send a browser one
+                req = urllib.request.Request(
+                    f"{MINT}/v1/mint/quote/bolt11/{inv['quote']}",
+                    headers={"User-Agent": "Mozilla/5.0"})
+                with urllib.request.urlopen(req, timeout=15) as r:
+                    live = json.load(r)
+            except Exception as exc:  # noqa: BLE001
+                live = {"error": str(exc)}
+            check("the mint itself serves that same quote (not a local string)",
+                  live is not None and live.get("quote") == inv["quote"]
+                  and live.get("state") in ("UNPAID", "PAID", "ISSUED"),
+                  f"mint says state={live.get('state') if live else None}")
+
+            # one-use at the money boundary: the same proof cannot buy a 2nd invoice
+            second = buyer.evaluate(
+                "() => window.__buyer.gate.quote({amount:'27900',currency:'sats'}, window.__buyer.proof)"
+                ".then(() => 'ACCEPTED (bad!)').catch(e => e.message)")
+            check("the trust gate refuses a SECOND invoice for the same proof (key image spent)",
+                  "key image" in (second or "").lower() or "already used" in (second or "").lower(),
+                  f"gate said: {second}")
+
+            check("order lifecycle does NOT advance while the mint reports UNPAID",
+                  buyer.evaluate("() => window.__buyer.paymentConfirmed") is False,
+                  f"mint state={live.get('state') if live else None}")
 
             # ── negative: a ring containing an outside key ───────────────────
             buyer.goto(buyer_url)
@@ -180,6 +212,17 @@ def main():
             blocked_visible = buyer.evaluate(
                 "() => !document.querySelector('#vet-banner').textContent.includes('VERIFIED')")
             check("buyer sees the blocked state, not a pass", blocked_visible is True)
+
+            # the gate sits on the MONEY path. The UI already disables the button,
+            # so bypass the UI entirely: the rail itself must still refuse.
+            direct = buyer.evaluate(
+                "() => window.__buyer.gate.quote({amount:'27900',currency:'sats'}, window.__buyer.proof)"
+                ".then(() => 'ACCEPTED (bad!)').catch(e => e.message)")
+            check("no invoice for a rejected proof, even bypassing the UI",
+                  buyer.evaluate("() => window.__buyer.realQuote") is None, str(direct))
+            check("the gate's refusal is the real policy reason",
+                  "outside" in (direct or "").lower() or "trust set" in (direct or "").lower(),
+                  str(direct))
 
             buyer.close()
             ctx.close()

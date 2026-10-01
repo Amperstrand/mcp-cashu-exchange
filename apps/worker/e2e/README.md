@@ -48,18 +48,32 @@ Two more traps that cost real time:
 
 ## What is asserted
 
+Trust policy (all verdicts are real `verifyProof` return values / reason strings):
+
 1. the buyer's trust set is pinned from the roster fixture (8 members, content hash)
 2. honest facilitator → `verifyProof().ok === true`
 3. all six displayed checks pass
 4. anonymity set = ring size = 4
-5. replay to a different order → rejected (real reason)
-6. key-image reuse → first accepted, second rejected (real reason)
-7. the payment step runs and is flagged simulated
-8. the order lifecycle advances through all five stages
-9. a ring containing a key outside the pinned set → rejected (real reason)
-10. the rejection text names the trust set / outside key
-11. the buyer displays the blocked state, not a pass
+5. replay to a different order → rejected
+6. key-image reuse → first accepted, second rejected
+7. a ring containing a key outside the pinned set → rejected
+8. the rejection text names the trust set / outside key
+9. the buyer displays the blocked state, not a pass
 
-Honest scope: there is no Lightning node. The payment step is labelled
-`SIMULATED` in the UI itself and moves no sats. The ring-signature verification
-— the part this work is about — is real and runs the shipped policy.
+Money path (the trust gate wraps the rail, not the screen):
+
+10. a REAL invoice comes back from the mint — signet BOLT11, exact order amount
+11. the test process asks the mint independently and gets the same quote
+    back as `UNPAID` — proof the invoice exists at the mint, not just in the DOM
+12. the gate refuses a **second** invoice for the same proof (key image spent)
+13. no invoice is created for a rejected proof, **even bypassing the UI** by
+    calling the gated rail directly
+14. that refusal carries the real policy reason
+15. the order lifecycle does NOT advance while the mint reports `UNPAID`
+
+Honest scope: the invoice is real and payable by any signet wallet, and the
+mint's own state machine is what the UI reads. The demo holds no signet funds,
+so the paid → `ISSUED` leg (minting the ecash and handing it to the facilitator)
+is not exercised here — it needs the invoice to actually be paid. What is proven
+is that the policy guards the money path: without a valid proof the rail never
+reaches the mint, so no invoice exists to pay at all.

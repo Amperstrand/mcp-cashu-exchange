@@ -140,19 +140,29 @@ def main():
             cap(5, f"Attack 2 — reuse the key image: second attempt rejected ({ru['reason']})")
             page.wait_for_timeout(4500)
 
-            # 6 — payment (simulated, labeled)
+            # 6 — payment: a REAL mint quote, requested through the trust gate
             buyer.click("#go-pay")
-            cap(6, "Payment — SIMULATED in this demo, no Lightning node. The verification was the real part")
-            page.wait_for_timeout(4000)
-            buyer.click("#pay-confirm")
-            page.wait_for_timeout(2000)
+            buyer.wait_for_function(
+                "() => window.__buyer.realQuote !== null || window.__buyer.gateReason !== null",
+                timeout=25000)
+            inv = buyer.evaluate(
+                "() => ({ q: window.__buyer.realQuote, net: window.__buyer.invoiceNetwork })")
+            cap(6, f"Payment: a REAL {inv['net']} invoice issued by the mint — "
+                   "requested through the trust gate, so no proof means no invoice")
+            page.wait_for_timeout(5500)
+            buyer.click("#pay-recheck")
+            page.wait_for_timeout(2500)
+            mstate = buyer.evaluate("() => window.__buyer.mintState")
+            cap(6, f"The badge reads the mint's own state machine: {mstate}. "
+                   "Not simulated — payable by any signet wallet")
+            page.wait_for_timeout(5000)
 
-            # 7 — lifecycle
-            for st, txt in (("accepted", "Facilitator accepted"), ("preparing", "Making your pizza"),
-                            ("delivery", "Out for delivery"), ("delivered", "Delivered — sats released")):
-                fac.click(f'[data-status="{st}"]')
-                cap(7, f"Order lifecycle — {txt}")
-                page.wait_for_timeout(2600)
+            # 7 — the lifecycle unlocks only on a real payment
+            fac.click('[data-status="accepted"]')
+            page.wait_for_timeout(2500)
+            cap(7, "The order cannot advance on a promise — the lifecycle unlocks when "
+                   "the mint reports PAID")
+            page.wait_for_timeout(4500)
 
             # 8 — the blocked case
             buyer.goto(f"http://127.0.0.1:{PORT}/order.html")

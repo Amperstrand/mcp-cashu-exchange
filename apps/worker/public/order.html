@@ -181,18 +181,39 @@
       </div>
     </section>
 
-    <!-- 5 PAY -->
+    <!-- 5 PAY — real Cashu mint quote, no theatre -->
     <section data-screen="pay" class="hide">
       <h2>Pay with bitcoin</h2>
       <div class="card center" style="margin-top:12px">
         <div class="big sats" id="pay-amount">—</div>
         <div class="sub" id="pay-order">—</div>
       </div>
-      <div class="sim">SIMULATED INVOICE — this demo has no Lightning node and moves no
-        sats. The ring-signature verification on the previous screen is real; this
-        payment step is theatre and says so.</div>
-      <div class="card"><div class="mono" id="pay-invoice">—</div></div>
-      <div class="cta"><button class="wide" id="pay-confirm">Confirm (simulated payment)</button></div>
+      <div id="pay-gate" class="card"><span class="spin"></span>
+        <p style="margin-top:8px">Requesting a real invoice from the mint…</p></div>
+      <div id="pay-live" class="hide" style="display:flex;flex-direction:column;gap:12px">
+        <div class="card">
+          <h3>Invoice from the mint</h3>
+          <div class="kv"><span>Mint</span><span class="mono" id="pay-mint">—</span></div>
+          <div class="kv"><span>Network</span><span id="pay-net">—</span></div>
+          <div class="kv"><span>Quote</span><span class="mono" id="pay-quote">—</span></div>
+          <div class="kv"><span>Expires</span><span id="pay-expiry">—</span></div>
+          <div class="kv"><span>Mint state</span><span class="pill ac" id="pay-state">—</span></div>
+        </div>
+        <div class="card"><h3>BOLT11</h3>
+          <div class="addr" id="pay-invoice">—</div>
+          <div class="row" style="gap:8px;margin-top:8px">
+            <button class="ghost" id="pay-copy" style="flex:1">Copy invoice</button>
+            <button class="ghost" id="pay-recheck" style="flex:1">Check mint now</button>
+          </div>
+        </div>
+        <p class="note">This is a real, payable signet invoice issued by the mint the
+          worker already settles against (<span class="mono">cdk-a056e0f.cashu.exchange</span>).
+          Nothing is simulated: the mint's own state machine is what the badge above reads.
+          No sats move until somebody pays it — the demo holds no signet funds, so the
+          paid → issued path is real code you can exercise by paying the invoice.</p>
+      </div>
+      <div id="pay-refused" class="hide banner err"></div>
+      <div class="cta"><button class="wide hide" id="pay-confirm">I have paid — issue ecash</button></div>
     </section>
 
     <!-- 6 TRACK -->
@@ -235,7 +256,8 @@
     screen: "discover", order: ORDER, pin: null, trustSet: null,
     roster: null, chosen: null, proof: null, verdict: null,
     checks: [], attacks: {}, anonymitySetSize: null, keyImage: null,
-    paymentSimulated: true,
+    realQuote: null, gateReason: null, mintState: null, invoiceNetwork: null,
+    paymentConfirmed: false,
   };
 
   const show = (name) => {
@@ -285,6 +307,7 @@
     $("#pin-hash").textContent = short(state.pin.contentHash, 8) + "…";
     $("#vetted-count").textContent = `${trustSet.members.length} vetted`;
     renderFacilitators();
+    gatedRail();   // build the money-path gate now, so it exists as soon as the page is ready
   }
 
   function renderFacilitators() {
@@ -425,16 +448,117 @@
       `reuse → first ${first.ok ? "ACCEPTED" : "rejected"}, second ${second.ok ? "ACCEPTED (bad!)" : "REJECTED: " + second.reason}`;
   }
 
-  // ── payment (simulated) + tracking ───────────────────────────────────────
-  function confirmPayment() {
-    state.paymentConfirmed = true;
-    CH.postMessage({ type: "PAID", orderId: ORDER.orderId });
-    $("#track-head").textContent = `Order #${ORDER.orderId}`;
-    $("#track-fac").textContent = state.facilitator;
-    $("#track-anon").textContent = String(state.anonymitySetSize);
-    renderTimeline("paid");
-    show("track");
+  // ── payment: a REAL mint quote, requested THROUGH the trust gate ─────────
+  // The invoice is not a string we invented. It is issued by the mint the worker
+  // already settles against (apps/worker/src/cashu-settle.ts), and the state
+  // badge reads that mint's own quote state machine. The quote is requested
+  // through withTrustGate, so the policy guards the MONEY path: no valid proof,
+  // no quote, no invoice, nothing payable.
+  const MINT = "https://cdk-a056e0f.cashu.exchange";
+  let gate = null;
+  let pollTimer = null;
+
+  const cashuRail = {
+    id: "cashu-mint-signet",
+    kind: "cashu",
+    displayName: "Cashu mint (signet zoo)",
+    async quote(amount) {
+      const res = await fetch(`${MINT}/v1/mint/quote/bolt11`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ amount: Number(amount.amount), unit: "sat" }),
+      });
+      if (!res.ok) throw new Error(`mint refused the quote: HTTP ${res.status}`);
+      const q = await res.json();
+      state.realQuote = q;
+      return { railId: "cashu-mint-signet", kind: "cashu", amount, instructions: q.request };
+    },
+    async pay() {
+      return { status: "pending", reference: state.realQuote ? state.realQuote.quote : "none" };
+    },
+  };
+
+  function gatedRail() {
+    if (!gate) {
+      // the gate's own seen-set is the authoritative one-use register: the key
+      // image is spent when we ask the mint for money, not when we look at a proof
+      gate = T.withTrustGate(cashuRail, {
+        pin: state.pin, trustSet: state.trustSet, seen: T.createSeenSet(),
+      });
+      state.gate = gate;   // exposed so the e2e can assert on the money boundary
+    }
+    return gate;
   }
+
+  function setMintState(s) {
+    state.mintState = s;
+    const el = $("#pay-state");
+    el.textContent = s;
+    el.className = "pill " + (s === "PAID" || s === "ISSUED" ? "ok" : "ac");
+  }
+
+  function renderInvoice(q) {
+    state.invoiceNetwork = q.request.startsWith("lntbs") ? "signet"
+      : q.request.startsWith("lnbcrt") ? "regtest"
+        : q.request.startsWith("lnbc") ? "mainnet" : "unknown";
+    $("#pay-invoice").textContent = q.request;
+    $("#pay-mint").textContent = MINT.replace("https://", "");
+    $("#pay-net").textContent = state.invoiceNetwork;
+    $("#pay-quote").textContent = q.quote;
+    $("#pay-expiry").textContent = new Date(q.expiry * 1000).toLocaleString("en-GB",
+      { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "short" });
+    $("#pay-gate").classList.add("hide");
+    $("#pay-live").classList.remove("hide");
+    setMintState(q.state);
+  }
+
+  async function requestInvoice() {
+    $("#pay-refused").classList.add("hide");
+    $("#pay-gate").classList.remove("hide");
+    $("#pay-live").classList.add("hide");
+    try {
+      const quote = await gatedRail().quote({ amount: ORDER.amount, currency: "sats" }, state.proof);
+      state.gateReason = null;
+      renderInvoice(state.realQuote);
+      startPolling();
+      return quote;
+    } catch (err) {
+      state.realQuote = null;
+      state.gateReason = err.message || String(err);
+      $("#pay-gate").classList.add("hide");
+      const box = $("#pay-refused");
+      box.classList.remove("hide");
+      box.innerHTML = `<div style="font-weight:700;color:var(--err)">No invoice was created</div>
+        <p style="margin-top:6px;color:var(--text)">The trust gate refused before the rail
+        could ask the mint, so no quote exists and there is nothing to pay.</p>
+        <div class="mono" style="margin-top:8px">${state.gateReason}</div>`;
+      return null;
+    }
+  }
+
+  async function checkMint() {
+    const q = state.realQuote;
+    if (!q) return null;
+    const res = await fetch(`${MINT}/v1/mint/quote/bolt11/${q.quote}`);
+    if (!res.ok) return null;
+    const fresh = await res.json();
+    state.realQuote = fresh;
+    setMintState(fresh.state);
+    if (fresh.state === "PAID" || fresh.state === "ISSUED") {
+      state.paymentConfirmed = true;
+      CH.postMessage({ type: "PAID", orderId: ORDER.orderId });
+      $("#track-head").textContent = `Order #${ORDER.orderId}`;
+      $("#track-fac").textContent = state.facilitator;
+      $("#track-anon").textContent = String(state.anonymitySetSize);
+      renderTimeline("paid");
+      stopPolling();
+      show("track");
+    }
+    return fresh;
+  }
+  function startPolling() { stopPolling(); pollTimer = setInterval(checkMint, 5000); }
+  function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
+
   const STEPS = ["Paid", "Facilitator accepted", "Making your pizza", "Out for delivery", "Delivered · sats released"];
   function renderTimeline(stage) {
     const at = { paid: 0, accepted: 1, preparing: 2, delivery: 3, delivered: 4 }[stage] ?? 0;
@@ -453,8 +577,12 @@
   $("#go-menu").addEventListener("click", () => show("menu"));
   $("#go-choose").addEventListener("click", () => { setBasket(); show("choose"); });
   $("#go-vet").addEventListener("click", startVetting);
-  $("#go-pay").addEventListener("click", () => show("pay"));
-  $("#pay-confirm").addEventListener("click", confirmPayment);
+  $("#go-pay").addEventListener("click", async () => { show("pay"); await requestInvoice(); });
+  $("#pay-copy").addEventListener("click", () => {
+    navigator.clipboard.writeText($("#pay-invoice").textContent).catch(() => {});
+    $("#pay-copy").textContent = "Copied";
+  });
+  $("#pay-recheck").addEventListener("click", checkMint);
   $("#retry").addEventListener("click", () => show("choose"));
   $("#atk-replay").addEventListener("click", runReplay);
   $("#atk-reuse").addEventListener("click", runReuse);
