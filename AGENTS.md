@@ -7,8 +7,9 @@ This repository is public. Treat every file as if a stranger will read it.
 - Card numbers, expiry, CVC, or a 2fiat / prepaid card in any form.
 - HAR files, pcaps, logs, screenshots of a checkout page, cookies, session
   dumps, `.env`, `.dev.vars`, identity files, or secret keys.
-- A tool response that returns a PAN. `payment.card_details` must stay off.
-  The public payment boundary is a checkout URL.
+- A tool response or secret that returns or stores a PAN. There is no
+  `payment.card_details` and no card-shaped secret in this repo; keep it that
+  way. The public payment boundary is a checkout URL (docs/PAYMENT.md).
 
 Logs and HAR files are how a card number leaks. They are gitignored.
 `git add -f` on one of them must still fail the pre-commit hook.

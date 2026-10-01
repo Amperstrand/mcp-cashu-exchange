@@ -1,4 +1,3 @@
-import type { CardCredentials } from "@exchange/contracts";
 import {
   buildMcpServer,
   CATALOG,
@@ -11,7 +10,7 @@ import {
   OverpassUnavailableError,
 } from "@exchange/plugin-berlin-charging";
 import { cinemaProvider, FILMS } from "@exchange/plugin-cinema";
-import { twoFiatCardRail } from "@exchange/plugin-pay-2fiat";
+import { ownCardRail } from "@exchange/plugin-pay-2fiat";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -29,12 +28,7 @@ import {
 
 export interface Env {
   readonly CACHE: KVNamespace;
-  readonly TWOFIAT_CARD_PAN?: string;
-  readonly TWOFIAT_CARD_EXP?: string;
-  readonly TWOFIAT_CARD_CVC?: string;
   readonly DOWNSTREAMS?: string;
-  /** Must be "true" for payment.card_details (full PAN) to register at all. */
-  readonly EXPOSE_CARD_DETAILS?: string;
 }
 
 const DownstreamsVar = z.array(
@@ -66,28 +60,12 @@ function parseDownstreams(
   }
 }
 
-function cardFromEnv(env: Env): CardCredentials | undefined {
-  const {
-    TWOFIAT_CARD_PAN: pan,
-    TWOFIAT_CARD_EXP: exp,
-    TWOFIAT_CARD_CVC: cvc,
-  } = env;
-  if (pan === undefined || exp === undefined || cvc === undefined) {
-    return undefined;
-  }
-  return { pan, exp, cvc, note: "2fiat prepaid Mastercard — demo card rail" };
-}
-
 function exchangeDeps(env: Env): ExchangeDeps {
-  const card = cardFromEnv(env);
   const charging = withKvCache(berlinChargingProvider(), env.CACHE, 600);
   return {
     registry: createRegistry([charging, cinemaProvider()]),
-    rails: card === undefined ? [] : [twoFiatCardRail(card)],
+    rails: [ownCardRail()],
     downstreams: parseDownstreams(env.DOWNSTREAMS),
-    ...(card !== undefined && env.EXPOSE_CARD_DETAILS === "true"
-      ? { card }
-      : {}),
   };
 }
 

@@ -116,14 +116,6 @@ export interface PaymentRail {
   pay(quote: PaymentQuote): Promise<PaymentResult>;
 }
 
-/** Credentials for the card rail. Arrive only from secrets; never hardcode. */
-export interface CardCredentials {
-  readonly pan: string;
-  readonly exp: string;
-  readonly cvc: string;
-  readonly note: string;
-}
-
 export function assertNever(x: never): never {
   throw new Error(`unhandled variant: ${String(x)}`);
 }

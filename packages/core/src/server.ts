@@ -1,4 +1,4 @@
-import type { CardCredentials, PaymentRail } from "@exchange/contracts";
+import type { PaymentRail } from "@exchange/contracts";
 import { railId } from "@exchange/contracts";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
@@ -11,8 +11,6 @@ export interface ExchangeDeps {
   readonly registry: Registry;
   readonly rails: readonly PaymentRail[];
   readonly downstreams: readonly DownstreamConfig[];
-  /** Present only when a card rail is configured; enables payment.card_details. */
-  readonly card?: CardCredentials;
 }
 
 const geoPoint = z.object({
@@ -122,20 +120,6 @@ export function buildMcpServer(deps: ExchangeDeps): McpServer {
       );
     },
   );
-
-  const card = deps.card;
-  if (card !== undefined) {
-    server.registerTool(
-      "payment.card_details",
-      {
-        title: "Get payment card credentials",
-        description:
-          "Full credentials of the configured prepaid card rail for agent-driven checkout. Only registered when the operator has set the card secrets.",
-        inputSchema: {},
-      },
-      async () => asText(card),
-    );
-  }
 
   return server;
 }

@@ -20,14 +20,14 @@ real-world services.
 An *exchange*, not a monolith. Three moving pieces:
 
 1. **Native plugins** (public, in this repo) — safe to open-source: OpenStreetMap
-   data, card rail wiring, generic contracts.
+   data, checkout-handoff payment instructions, generic contracts.
 2. **Federated downstreams** (private, yours) — existing MCP servers
    (`oda-mcp`, `vipps-mcp`, …) mounted through the gateway. Their code and
    personal data never enter this repo; only their URL + token (secrets).
 3. **Payment rails** — interchangeable `PaymentRail` implementations:
-   `2fiat-card` (prepaid Mastercard funded from crypto), Cashu (via
-   [pecan](https://github.com/zeugmaster/pecan) for alternative numeraires),
-   Lightning (stretch).
+   `2fiat-card` (own-card checkout handoff — no card ever touches this repo),
+   Cashu (via [pecan](https://github.com/zeugmaster/pecan) for alternative
+   numeraires), Lightning (stretch). See [docs/PAYMENT.md](docs/PAYMENT.md).
 
 ## Layout
 
@@ -36,7 +36,7 @@ packages/
   contracts/                The two contracts: ServiceProvider, PaymentRail
   core/                     Registry + MCP server + downstream gateway + catalog
   plugin-berlin-charging/   OSM/Overpass charging stations (native plugin)
-  plugin-pay-2fiat/         Prepaid Mastercard rail (card credentials via secrets)
+  plugin-pay-2fiat/         Own-card checkout handoff rail (holds no card)
   map/                      Map frontend (placeholder: worker serves Leaflet page)
   chat/                     Chat frontend (placeholder: any MCP client works today)
 apps/
@@ -52,7 +52,6 @@ apps/
 | `berlin-charging.search` | EV chargers near a point (defaults: central Berlin) |
 | `cinema.search` | Berlin cinema programme (category `shopping`) |
 | `payment.quote` | Payment instructions for an amount, per rail |
-| `payment.card_details` | Card credentials — only when card secrets **and** `EXPOSE_CARD_DETAILS=true` are set |
 
 ## Develop
 
@@ -77,10 +76,11 @@ Continuous deployment on push to `main` (`.github/workflows/deploy.yml`) via
 
 Worker runtime secrets (`wrangler secret put`, per-name):
 
-- `TWOFIAT_CARD_PAN`, `TWOFIAT_CARD_EXP`, `TWOFIAT_CARD_CVC` — enables the
-  card rail and `payment.card_details`
 - `DOWNSTREAMS` — JSON array `[{"name":"oda-mcp","url":"https://…/mcp"}]`
   (plus a `TOKEN`-style secret per downstream if you extend the env parsing)
+
+There are no card secrets, on purpose: participants pay with their own card
+on the merchant's hosted checkout page. See [docs/PAYMENT.md](docs/PAYMENT.md).
 
 ## Hygiene rules (why this repo stays clean)
 
@@ -90,8 +90,9 @@ Worker runtime secrets (`wrangler secret put`, per-name):
 3. Reverse-engineered API knowledge lives in private kits; this repo consumes
    them through the gateway. A plugin that needs personal data is a private
    kit implementing the same MCP surface — not a plugin here.
-4. `payment.card_details` exists for agent-driven checkout demos. When the
-   card is not configured, the tool is not registered at all.
+4. No tool returns card details — there is no `payment.card_details` and no
+   card in any secret. The payment boundary is the merchant's hosted checkout
+   URL, opened by the person paying (see [docs/PAYMENT.md](docs/PAYMENT.md)).
 
 ## Publication & leak policy
 
