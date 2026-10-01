@@ -23,3 +23,9 @@ coverage/
 identity.json
 session.json
 cookies.txt
+
+# e2e harness
+!packages/plugin-trust-ring/e2e/dist/
+!packages/plugin-trust-ring/e2e/dist/trust-ring.bundle.js
+packages/plugin-trust-ring/e2e/videos/
+packages/plugin-trust-ring/e2e/*.mp4
