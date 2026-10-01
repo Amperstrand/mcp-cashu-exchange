@@ -41,7 +41,89 @@ packages/
   chat/                     Chat frontend (placeholder: any MCP client works today)
 apps/
   worker/                   Composition root → deploys to mcp.cashu.exchange
+docs/
+  PAYMENT.md                The own-card payment pattern (why no card lives here)
 ```
+
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph P["Participant — own keys, own card"]
+    B["Browser<br/>(chat / map / checkout)"]
+    MC["MCP client"]
+    INBOX["own cashu.email inbox<br/>(npub = account)"]
+    CARD["own card<br/>(personal or 2fiat)"]
+  end
+
+  subgraph X["mcp.cashu.exchange — public worker (Cloudflare)"]
+    MCP["POST /mcp<br/>stateless MCP server"]
+    CHAT["chat sessions + offers"]
+    SETTLE["Cashu settle"]
+    REG["registry"]
+    GW["downstream gateway"]
+    KV[("KV cache")]
+  end
+
+  subgraph PLUG["Native plugins (this repo, public)"]
+    CHG["berlin-charging<br/>OSM/Overpass"]
+    CIN["cinema<br/>(Yorck programme)"]
+    RAIL["2fiat-card rail<br/>own-card handoff —<br/>holds no card"]
+  end
+
+  subgraph J["Amperstrand/jamezz (public)"]
+    JC["JamezzClient<br/>menu read + order prepare"]
+    TESTS["synthetic fakes<br/>+ wiring tests"]
+    PROMPTS["onboarding prompts<br/>(table / platform / brand)"]
+  end
+
+  subgraph EXT["External"]
+    QR["qrv5.jamezz.app<br/>(venue API)"]
+    MOL["Mollie hosted checkout"]
+    MINT["Testnut Cashu mint"]
+    OVP["OSM Overpass API"]
+  end
+
+  subgraph KIT["Private kits (federated, never public)"]
+    DS["europark-parking MCP<br/>(+ oda/vipps/…)"]
+  end
+
+  B --> CHAT --> SETTLE --> MINT
+  MC --> MCP
+  MCP --> REG --> CHG & CIN
+  MCP --> RAIL
+  MCP --> GW --> DS
+  CHG --> OVP
+  CHG --> KV
+  JC --> QR --> MOL
+  CARD --> MOL
+  INBOX -. verification codes .-> B
+```
+
+Payment boundary: **the hosted checkout URL**. The participant opens it and
+pays with their own card; no card number ever enters a repo, secret, or tool
+([docs/PAYMENT.md](docs/PAYMENT.md)). Venue identity flows the other way:
+a table QR becomes a `JamezzClient` venue with zero credentials
+([Amperstrand/jamezz](https://github.com/Amperstrand/jamezz)).
+
+## Component status
+
+| Component | Where | Status |
+|---|---|---|
+| Exchange worker (MCP + chat + map + JSON APIs) | `apps/worker` | deployed; CD blocked on `CLOUDFLARE_API_TOKEN` (issue #1) |
+| Contracts (`ServiceProvider`, `PaymentRail`) | `packages/contracts` | done |
+| Registry + gateway + catalog | `packages/core` | done |
+| Berlin charging plugin (OSM/Overpass, KV-cached) | `packages/plugin-berlin-charging` | done |
+| Cinema plugin (Yorck programme) | `packages/plugin-cinema` | works; hardcoded data policy = issue #3 |
+| Own-card payment rail (card-free) | `packages/plugin-pay-2fiat` | done |
+| Cashu settlement (chat offers → Testnut mint) | `apps/worker/src/cashu-settle.ts` | done |
+| Jamezz client + prompts + offline tests | [Amperstrand/jamezz](https://github.com/Amperstrand/jamezz) | done (1 table mapped) |
+| **plugin-jamezz: venue tools on the exchange** | missing | **next build** — expose menu/order/checkout-URL as `<id>.search` + `payment.quote`, reusing the jamezz package |
+| Venue catalog growth (more QR mids) | jamezz `src/venues.ts` | 1 of ~18 Burgermeister locations; see its `docs/CANDIDATES.md` |
+| Pecan (alternative-numeraire settlement) | catalog entry only | wiring not started |
+| Lightning rail | — | stretch |
+| jamezz npm publish | — | open decision |
+| Leak gates + commit wrappers (both repos) | `scripts/` | done, enforced in CI |
 
 ## MCP tools
 
