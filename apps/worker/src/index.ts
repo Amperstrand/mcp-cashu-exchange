@@ -107,6 +107,8 @@ async function handleMcp(request: Request, env: Env): Promise<Response> {
 
 const app = new Hono<{ Bindings: Env }>();
 
+export { app };
+
 app.all("/mcp", (c) => handleMcp(c.req.raw, c.env));
 
 app.get("/health", (c) =>
