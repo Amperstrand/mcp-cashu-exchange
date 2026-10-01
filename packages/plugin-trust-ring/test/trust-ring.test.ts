@@ -73,7 +73,12 @@ function secretKey(keys: readonly KeyPair[], i: number): Uint8Array {
 
 // ── LSAG unit tests (ported from the original test suite) ───────────
 
-describe("LSAG sign/verify", () => {
+// The two suites below are CPU-bound (real secp256k1 scalar multiplication, no
+// I/O). Idle they take 0.2-0.6s per test; on a loaded box (observed load 24-29
+// on 4 cores) individual tests crossed vitest's 5s default and produced false
+// reds. 30s is an explicit budget for a slow-but-progressing test, not a mask
+// for a hang.
+describe("LSAG sign/verify", { timeout: 30000 }, () => {
   it("verifies a valid signature (ring of 4)", () => {
     const keys = [
       generateKeyPair(),
@@ -196,7 +201,7 @@ describe("trust set model", () => {
 
 // ── Trust ring: happy path + four negative cases ────────────────────
 
-describe("trust ring prove/verify", () => {
+describe("trust ring prove/verify", { timeout: 30000 }, () => {
   it("HAPPY PATH: honest proof is accepted", () => {
     const N = 8;
     const { set, keys, pin } = buildTrustSet(N);
