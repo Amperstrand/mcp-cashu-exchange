@@ -203,10 +203,31 @@ function scanText(allowlist, findings, text, filePath, lineOffset = 0) {
   }
 }
 
+/**
+ * The gate guards what can be COMMITTED: git-visible files only (tracked
+ * + untracked-not-ignored). Gitignored local-only dirs (e.g. restored
+ * capture archives read by bundle generators) stay on disk by design and
+ * must not permanently redden the gate — the moment one is `git add`ed it
+ * becomes tracked and is scanned.
+ */
+function gitVisibleFiles(root) {
+  const out = execSync(
+    "git ls-files -z --cached --others --exclude-standard",
+    { cwd: root, maxBuffer: 64 * 1024 * 1024 },
+  );
+  return out.toString().split("\0").filter((f) => f !== "" && TEXT_EXT.test(f));
+}
+
 function scanTree(root, allowlist, findings) {
-  for (const file of walk(root)) {
-    const rel = relative(root, file);
-    scanText(allowlist, findings, readFileSync(file, "utf8"), rel);
+  let files;
+  try {
+    files = gitVisibleFiles(root);
+  } catch {
+    console.error("leak-scan: not a git repo — falling back to full fs walk");
+    files = [...walk(root)].map((f) => relative(root, f));
+  }
+  for (const rel of files) {
+    scanText(allowlist, findings, readFileSync(join(root, rel), "utf8"), rel);
   }
 }
 
