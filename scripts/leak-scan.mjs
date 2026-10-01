@@ -65,6 +65,11 @@ function isSecretishValue(raw) {
   return true;
 }
 
+/** Token-level exceptions: strings that pattern-match a rule but are known
+ *  technical identifiers, not personal data (ED25519 = ED + 25519 vs the
+ *  Norwegian plate pattern). Keep this list short and justified. */
+const KNOWN_TOKENS = new Set(["ED25519"]);
+
 const RULES = [
   {
     id: "pan",
@@ -172,6 +177,7 @@ function* scanLine(line) {
     const matches = prepared.match(rule.regex);
     if (matches === null) continue;
     for (const match of matches) {
+      if (KNOWN_TOKENS.has(match)) continue;
       if (rule.id === "secret-key") {
         const value = secretValueOf(prepared);
         if (value === null || !isSecretishValue(value)) continue;

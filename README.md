@@ -48,10 +48,11 @@ apps/
 | Tool | What it does |
 |---|---|
 | `directory.list_services` | Catalog + native providers + payment rails |
-| `gateway.list_downstreams` | Tools from federated downstream MCP servers |
+| `gateway.list_downstreams` | Tools from federated downstream MCP servers (europark parking) |
 | `berlin-charging.search` | EV chargers near a point (defaults: central Berlin) |
+| `cinema.search` | Berlin cinema programme (category `shopping`) |
 | `payment.quote` | Payment instructions for an amount, per rail |
-| `payment.card_details` | Card credentials — only when card secrets are set |
+| `payment.card_details` | Card credentials — only when card secrets **and** `EXPOSE_CARD_DETAILS=true` are set |
 
 ## Develop
 
