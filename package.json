@@ -12,6 +12,9 @@
     "packages/*",
     "apps/*"
   ],
+  "dependencies": {
+    "jamezz": "github:Amperstrand/jamezz#a5508ab"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

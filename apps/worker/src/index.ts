@@ -11,6 +11,8 @@ import {
 } from "@exchange/plugin-berlin-charging";
 import { cinemaProvider, FILMS } from "@exchange/plugin-cinema";
 import { ownCardRail } from "@exchange/plugin-pay-2fiat";
+import { jamezzProvider } from "@exchange/plugin-jamezz";
+import { SERVICE_CATEGORIES } from "@exchange/contracts";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -45,6 +47,15 @@ const ChargingQuery = z.object({
   radiusKm: z.coerce.number().positive().max(50).default(5),
 });
 
+/** Generic search over the registry — the REST twin of every *.search tool. */
+const SearchUrlQuery = z.object({
+  category: z.enum(SERVICE_CATEGORIES),
+  text: z.string().max(200).optional(),
+  lat: z.coerce.number().min(-90).max(90).optional(),
+  lng: z.coerce.number().min(-180).max(180).optional(),
+  radiusKm: z.coerce.number().positive().max(100).optional(),
+});
+
 /** Boundary parse: a malformed DOWNSTREAMS var degrades to zero downstreams. */
 function parseDownstreams(
   raw: string | undefined,
@@ -63,7 +74,7 @@ function parseDownstreams(
 function exchangeDeps(env: Env): ExchangeDeps {
   const charging = withKvCache(berlinChargingProvider(), env.CACHE, 600);
   return {
-    registry: createRegistry([charging, cinemaProvider()]),
+    registry: createRegistry([charging, cinemaProvider(), jamezzProvider()]),
     rails: [ownCardRail()],
     downstreams: parseDownstreams(env.DOWNSTREAMS),
   };
@@ -93,8 +104,27 @@ const app = new Hono<{ Bindings: Env }>();
 app.all("/mcp", (c) => handleMcp(c.req.raw, c.env));
 
 app.get("/health", (c) =>
-  c.json({ ok: true, service: "mcp.cashu-exchange", version: "0.0.1" }),
+  c.json({ ok: true, service: "mcp-cashu-exchange", version: "0.0.1" }),
 );
+
+app.get("/api/search", async (c) => {
+  const parsed = SearchUrlQuery.safeParse(c.req.query());
+  if (!parsed.success) {
+    return c.json({ error: "invalid query", issues: parsed.error.issues }, 400);
+  }
+  const query = parsed.data;
+  const near =
+    query.lat !== undefined && query.lng !== undefined
+      ? { lat: query.lat, lng: query.lng }
+      : undefined;
+  const records = await exchangeDeps(c.env).registry.search({
+    category: query.category,
+    ...(query.text !== undefined ? { text: query.text } : {}),
+    ...(near !== undefined ? { near } : {}),
+    ...(query.radiusKm !== undefined ? { radiusKm: query.radiusKm } : {}),
+  });
+  return c.json({ count: records.length, records });
+});
 
 app.get("/api/services", (c) => {
   const deps = exchangeDeps(c.env);
