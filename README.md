@@ -123,7 +123,8 @@ a table QR becomes a `JamezzClient` venue with zero credentials
 | Contracts (`ServiceProvider`, `PaymentRail`) | `packages/contracts` | done |
 | Registry + gateway + catalog | `packages/core` | done |
 | Berlin charging plugin (OSM/Overpass, KV-cached) | `packages/plugin-berlin-charging` | done |
-| Cinema plugin (Yorck programme) | `packages/plugin-cinema` | works; hardcoded data policy = issue #3 |
+| Search results KV cache (generic, per-provider keys) | `apps/worker/src/cached-provider.ts` | done — 10 min TTL |
+| Cinema plugin (Yorck programme) | `packages/plugin-cinema` | demo data, capture-dated (`CAPTURED_AT`), refresh = replace `FILMS` |
 | Own-card payment rail (card-free) | `packages/plugin-pay-2fiat` | done |
 | Cashu settlement (chat offers → Testnut mint) | `apps/worker/src/cashu-settle.ts` | done |
 | Jamezz client + prompts + offline tests | [Amperstrand/jamezz](https://github.com/Amperstrand/jamezz) | done (1 table mapped) |

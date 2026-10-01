@@ -3,6 +3,8 @@ import { providerId, serviceId } from "@exchange/contracts";
 
 const CINEMA_PROVIDER_ID = providerId("cinema");
 
+export const CAPTURED_AT = "2026-09-30";
+
 /** Film entry: title, today's showtimes, per-ticket price in sats, optional cinema. */
 export interface Film {
   readonly title: string;
@@ -12,8 +14,10 @@ export interface Film {
 }
 
 /**
- * Real programme — tonight's Yorck screenings in Berlin (captured from
- * yorck.de, 2026-09-30 evening shows only). Prices are demo-mint sats.
+ * Demo programme — one evening's Yorck screenings in Berlin (captured
+ * 2026-09-30, evening shows only). Stale by design: the capture date is in
+ * CAPTURED_AT and in the provider's displayName. Refresh = replace FILMS
+ * and CAPTURED_AT. Prices are demo-mint sats.
  */
 export const FILMS: readonly Film[] = [
   {
@@ -60,13 +64,15 @@ export function cinemaProvider(): ServiceProvider {
   return {
     id: CINEMA_PROVIDER_ID,
     category: "shopping",
-    displayName: "Berlin cinema tonight (Yorck programme)",
+    displayName: `Berlin cinema tonight (Yorck capture ${CAPTURED_AT} — demo data)`,
     search: async (query) => {
       const text = query.text?.toLowerCase();
-      return FILMS.map(filmToRecord).filter(
-        (record) =>
-          text === undefined || record.name.toLowerCase().includes(text),
-      );
+      return FILMS.map(filmToRecord).filter((record) => {
+        if (text === undefined) return true;
+        const film = FILMS.find((f) => filmToRecord(f).id === record.id);
+        const haystack = `${record.name} ${film?.cinema ?? ""}`.toLowerCase();
+        return haystack.includes(text);
+      });
     },
     details: async (id) => {
       const film = FILMS.find(

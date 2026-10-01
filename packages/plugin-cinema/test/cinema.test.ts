@@ -62,3 +62,26 @@ describe("cinema provider", () => {
     }
   });
 });
+
+describe("cinema provider text matching", () => {
+  it("matches cinema names too, not only film titles", async () => {
+    const provider = cinemaProvider();
+    const byCinema = await provider.search({
+      category: "shopping",
+      text: "friedrichshain",
+    });
+    expect(byCinema.map((r) => r.name)).toEqual(["Primetime"]);
+
+    const byTitle = await provider.search({
+      category: "shopping",
+      text: "primetime",
+    });
+    expect(byTitle.map((r) => r.name)).toEqual(["Primetime"]);
+
+    const nonsense = await provider.search({
+      category: "shopping",
+      text: "western",
+    });
+    expect(nonsense).toEqual([]);
+  });
+});

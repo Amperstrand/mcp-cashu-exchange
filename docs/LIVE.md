@@ -7,8 +7,9 @@ real requests. Base URL: `https://mcp.cashu.exchange`.
 `33e5343`). Consequence: `payment.quote` returns `[]` on the live worker.
 Deploying HEAD needs `CLOUDFLARE_API_TOKEN` (issue #1) — until then, live
 behavior is exactly this document. Also waiting on that deploy:
-`jamezz.search` (food category, live menu preview) and the generic
-`/api/search` REST surface.
+`jamezz.search` (food category, live menu preview), the generic
+`/api/search` REST surface, KV-cached search results, and cinema text
+matching that includes cinema names (not just film titles).
 
 ## Surfaces (all live)
 
