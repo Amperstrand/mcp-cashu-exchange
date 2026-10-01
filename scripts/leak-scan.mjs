@@ -210,23 +210,34 @@ function scanText(allowlist, findings, text, filePath, lineOffset = 0) {
  * must not permanently redden the gate — the moment one is `git add`ed it
  * becomes tracked and is scanned.
  */
-function gitVisibleFiles(root) {
-  const out = execSync(
-    "git ls-files -z --cached --others --exclude-standard",
-    { cwd: root, maxBuffer: 64 * 1024 * 1024 },
-  );
-  return out.toString().split("\0").filter((f) => f !== "" && TEXT_EXT.test(f));
+function gitVisibleFiles(root, staged) {
+  const command = staged
+    ? "git diff --cached --name-only -z --diff-filter=ACMR"
+    : "git ls-files -z --cached --others --exclude-standard";
+  const out = execSync(command, { cwd: root, maxBuffer: 64 * 1024 * 1024 });
+  return out.toString().split("\0").filter((f) => f !== "");
 }
 
-function scanTree(root, allowlist, findings) {
+function scanTree(root, allowlist, findings, staged) {
   let files;
   try {
-    files = gitVisibleFiles(root);
+    files = gitVisibleFiles(root, staged);
   } catch {
     console.error("leak-scan: not a git repo — falling back to full fs walk");
     files = [...walk(root)].map((f) => relative(root, f));
   }
   for (const rel of files) {
+    if (BLOCKED_PATH.test(rel)) {
+      findings.push({
+        rule: "blocked-path",
+        why: "capture or secret file must stay gitignored",
+        file: rel,
+        line: 0,
+        sample: rel,
+      });
+      continue;
+    }
+    if (!TEXT_EXT.test(rel)) continue;
     scanText(allowlist, findings, readFileSync(join(root, rel), "utf8"), rel);
   }
 }
@@ -246,15 +257,19 @@ function scanHistory(root, allowlist, findings) {
   }
 }
 
+const BLOCKED_PATH =
+  /(^|\/)(\.env|\.env\..*|identity\.json|session\.json|cookies\.txt|.*\.har|.*\.pcap|.*\.log|.*\.pem|.*\.p12|flow-har.*|.*-har\.json)$|^(captures|fixtures|snapshots|films|research)\//i;
+
 const args = process.argv.slice(2);
 const history = args.includes("--history");
+const staged = args.includes("--staged");
 const root = args.find((a) => !a.startsWith("--")) ?? ".";
 const findings = [];
 const allowlist = loadAllowlist(root);
 const allowlistErrors = allowlist.filter((entry) => entry.bad !== undefined);
 for (const error of allowlistErrors) findings.push({ rule: "allowlist", why: error.bad, file: "scripts/leak-scan-allowlist.txt", line: 0, sample: "" });
 
-scanTree(root, allowlist, findings);
+scanTree(root, allowlist, findings, staged);
 if (history) scanHistory(root, allowlist, findings);
 
 const seen = new Set();

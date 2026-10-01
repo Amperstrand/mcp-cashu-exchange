@@ -8,7 +8,18 @@ coverage/
 
 # Captured/sample payloads — never committed (publication policy).
 # Synthetic fixtures live inline in tests with a provenance comment.
+# A card number in a log or HAR is still a leak. Do not git add -f these.
 **/fixtures/captures/
 **/captures/
+**/snapshots/
+**/films/
 **/*.har
 **/*.pcap
+**/*.log
+**/*.pem
+**/*.p12
+.env
+.env.*
+identity.json
+session.json
+cookies.txt
