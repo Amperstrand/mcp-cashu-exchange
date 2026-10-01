@@ -29,18 +29,26 @@ describe("GET /api/search", () => {
     };
     expect(body.count).toBe(1);
     expect(body.records[0]?.name).toBe("Primetime");
-    expect(body.records[0]?.details?.note).toContain("Filmtheater am Friedrichshain");
+    expect(body.records[0]?.details?.note).toContain(
+      "Filmtheater am Friedrichshain",
+    );
   });
 
   it("rejects an unknown category with 400", async () => {
-    const response = await app.request("/api/search?category=flights", undefined, env());
+    const response = await app.request(
+      "/api/search?category=flights",
+      undefined,
+      env(),
+    );
     expect(response.status).toBe(400);
   });
 
   it("lists the jamezz provider in /api/services", async () => {
     const response = await app.request("/api/services", undefined, env());
     expect(response.status).toBe(200);
-    const body = (await response.json()) as { providers: Array<{ id: string }> };
+    const body = (await response.json()) as {
+      providers: Array<{ id: string }>;
+    };
     expect(body.providers.map((p) => p.id)).toContain("jamezz");
   });
 });
