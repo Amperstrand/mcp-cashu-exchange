@@ -114,3 +114,14 @@ or tool — participants pay with their own card (personal or
 **Known issues:** #1 deploy token (blocks everything above), #3 hardcoded
 cinema programme (stale-data policy). Cold Overpass latency is cached away
 after the first hit.
+
+**Known quirks (verified 2026-10-01):**
+
+- `cinema.search` with `text` matches **film titles only** —
+  `text:"Primetime"` returns that film, `text:"drama"` returns `[]`. Omit
+  `text` for the whole programme.
+- `berlin-charging.search` and `/api/charging` take ~20 s on a cold
+  Overpass call, then are KV-cached for 10 minutes. A first-time timeout
+  is usually just Overpass, not an outage — retry.
+- `gateway.list_downstreams` reflects the `DOWNSTREAMS` secret; if it is
+  ever unset, the tool reports zero downstreams rather than erroring.
