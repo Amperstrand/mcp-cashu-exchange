@@ -1,4 +1,8 @@
-import type { PaymentQuote, PaymentRail, PaymentResult } from "@exchange/contracts";
+import type {
+  PaymentQuote,
+  PaymentRail,
+  PaymentResult,
+} from "@exchange/contracts";
 import { railId } from "@exchange/contracts";
 
 const RAIL_ID = railId("2fiat-card");
