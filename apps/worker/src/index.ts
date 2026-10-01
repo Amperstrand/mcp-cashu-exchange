@@ -1,3 +1,4 @@
+import { SERVICE_CATEGORIES } from "@exchange/contracts";
 import {
   buildMcpServer,
   CATALOG,
@@ -10,9 +11,8 @@ import {
   OverpassUnavailableError,
 } from "@exchange/plugin-berlin-charging";
 import { cinemaProvider, FILMS } from "@exchange/plugin-cinema";
-import { ownCardRail } from "@exchange/plugin-pay-2fiat";
 import { jamezzProvider } from "@exchange/plugin-jamezz";
-import { SERVICE_CATEGORIES } from "@exchange/contracts";
+import { ownCardRail } from "@exchange/plugin-pay-2fiat";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { Hono } from "hono";
 import { z } from "zod";

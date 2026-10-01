@@ -37,9 +37,10 @@ Full local loop in [docs/LIVE.md](LIVE.md) → "Handover".
 | Add a provider to the exchange | README → "Adding a component" |
 | Federate your own MCP server | append to the `DOWNSTREAMS` secret |
 
-The wiring that does not exist yet — exposing jamezz venues as exchange
-tools (`plugin-jamezz`) — is tracked as an issue and listed in README →
-Component status.
+The venue wiring exists: `jamezz.search` (MCP) and `/api/search?category=food`
+(REST) both serve the registry's food provider — pick whichever transport you
+like. Placing the order itself stays with the jamezz package and the
+merchant's hosted checkout (the payment boundary).
 
 ## House rules on the way in
 

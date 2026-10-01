@@ -6,7 +6,9 @@ real requests. Base URL: `https://mcp.cashu.exchange`.
 **Build status:** the live build predates the card-free payment rail (commit
 `33e5343`). Consequence: `payment.quote` returns `[]` on the live worker.
 Deploying HEAD needs `CLOUDFLARE_API_TOKEN` (issue #1) — until then, live
-behavior is exactly this document.
+behavior is exactly this document. Also waiting on that deploy:
+`jamezz.search` (food category, live menu preview) and the generic
+`/api/search` REST surface.
 
 ## Surfaces (all live)
 

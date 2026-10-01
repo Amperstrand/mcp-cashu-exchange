@@ -1,6 +1,7 @@
 import type {
   SearchQuery,
   ServiceDetails,
+  ServiceId,
   ServiceProvider,
   ServiceRecord,
 } from "@exchange/contracts";
@@ -42,7 +43,9 @@ async function snapshot(
       menu?.categories
         .flatMap((category) => category.items)
         .slice(0, 3)
-        .map((item) => `${item.name} ${item.price.toFixed(2)} ${item.currency}`) ?? [];
+        .map(
+          (item) => `${item.name} ${item.price.toFixed(2)} ${item.currency}`,
+        ) ?? [];
     venueInfo = {
       name: venue?.name ?? table.name,
       address: venue?.address ?? table.address,
@@ -78,7 +81,9 @@ async function snapshot(
  * (docs/PAYMENT.md). That split is deliberate: the exchange answers "what
  * and where", the participant's own tools answer "buy".
  */
-export function jamezzProvider(options: JamezzProviderOptions = {}): ServiceProvider {
+export function jamezzProvider(
+  options: JamezzProviderOptions = {},
+): ServiceProvider {
   const client =
     options.fetchImpl === undefined
       ? new JamezzClient()
@@ -91,7 +96,10 @@ export function jamezzProvider(options: JamezzProviderOptions = {}): ServiceProv
       const needle = query.text?.toLowerCase();
       const records: ServiceRecord[] = [];
       for (const table of KNOWN_TABLES) {
-        if (needle !== undefined && !table.name.toLowerCase().includes(needle)) {
+        if (
+          needle !== undefined &&
+          !table.name.toLowerCase().includes(needle)
+        ) {
           continue;
         }
         records.push(await snapshot(client, table));
@@ -104,7 +112,12 @@ export function jamezzProvider(options: JamezzProviderOptions = {}): ServiceProv
       if (table === undefined) {
         return { kind: "generic", note: `unknown table ${mid}` };
       }
-      return (await snapshot(client, table)).details ?? { kind: "generic", note: table.note };
+      return (
+        (await snapshot(client, table)).details ?? {
+          kind: "generic",
+          note: table.note,
+        }
+      );
     },
   };
 }

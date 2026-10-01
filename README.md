@@ -14,13 +14,19 @@ real-world services.
 | `/map.html` | Leaflet map of Berlin EV chargers (OSM/Overpass, KV-cached) |
 | `POST /mcp` | MCP server (streamable HTTP, stateless) |
 | `GET /api/services` · `/api/charging` | JSON surfaces for the map/other clients |
+| `GET /api/search?category=&text=&lat=&lng=&radiusKm=` | generic registry search — the REST twin of every `*.search` MCP tool |
 
 **What is deployed right now, with verified example calls and a handover:**
 [docs/LIVE.md](docs/LIVE.md).
 
 ## The idea
 
-An *exchange*, not a monolith. Three moving pieces:
+An *exchange*, not a monolith — and **one capability, many surfaces**: every
+provider is reachable as an MCP tool (`<id>.search`), as REST
+(`/api/search?category=…`), and as a plain library (the underlying package).
+Clients pick their transport; the registry does not care.
+
+Three moving pieces:
 
 1. **Native plugins** (public, in this repo) — safe to open-source: OpenStreetMap
    data, checkout-handoff payment instructions, generic contracts.
@@ -121,7 +127,7 @@ a table QR becomes a `JamezzClient` venue with zero credentials
 | Own-card payment rail (card-free) | `packages/plugin-pay-2fiat` | done |
 | Cashu settlement (chat offers → Testnut mint) | `apps/worker/src/cashu-settle.ts` | done |
 | Jamezz client + prompts + offline tests | [Amperstrand/jamezz](https://github.com/Amperstrand/jamezz) | done (1 table mapped) |
-| **plugin-jamezz: venue tools on the exchange** | missing | **next build** — expose menu/order/checkout-URL as `<id>.search` + `payment.quote`, reusing the jamezz package |
+| plugin-jamezz: venue tools on the exchange | `packages/plugin-jamezz` | done (live after next deploy) — discovery + menu preview; ordering deliberately stays in the jamezz package |
 | Venue catalog growth (more QR mids) | jamezz `src/venues.ts` | 1 of ~18 Burgermeister locations; see its `docs/CANDIDATES.md` |
 | Pecan (alternative-numeraire settlement) | catalog entry only | wiring not started |
 | Lightning rail | — | stretch |
@@ -136,6 +142,7 @@ a table QR becomes a `JamezzClient` venue with zero credentials
 | `gateway.list_downstreams` | Tools from federated downstream MCP servers (europark parking) |
 | `berlin-charging.search` | EV chargers near a point (defaults: central Berlin) |
 | `cinema.search` | Berlin cinema programme (category `shopping`) |
+| `jamezz.search` | Jamezz table-ordering venues (category `food`): venue, PSP, live menu preview — ordering itself stays with the [jamezz](https://github.com/Amperstrand/jamezz) package and the merchant's hosted checkout |
 | `payment.quote` | Payment instructions for an amount, per rail |
 
 ## Develop
