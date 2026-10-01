@@ -174,8 +174,6 @@
       ringIndices = pending.ringIndices;
       state.ring = ringIndices.map((i) => members[i].label);
     }
-    const preview = state.impersonating
-      ? ["?", "?", "?", "?"] : ringIndices.map(() => "<i>you</i>");
     $("#o-ring").innerHTML = state.impersonating
       ? `<i class="you">you</i>` + ["", "", ""].map(() => "<i>?</i>").join("")
       : ringIndices.map((_, i) => `<i class="${i === 0 ? "you" : ""}">${i === 0 ? "you" : "?"}</i>`).join("");
