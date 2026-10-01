@@ -15,6 +15,9 @@ real-world services.
 | `POST /mcp` | MCP server (streamable HTTP, stateless) |
 | `GET /api/services` · `/api/charging` | JSON surfaces for the map/other clients |
 
+**What is deployed right now, with verified example calls and a handover:**
+[docs/LIVE.md](docs/LIVE.md).
+
 ## The idea
 
 An *exchange*, not a monolith. Three moving pieces:
