@@ -161,9 +161,8 @@ def main() -> int:
             hold(4)
 
             # 5 — the proof and the verdict
-            buyer.click('#fac-list [data-fac="0"]')
-            page.wait_for_timeout(700)
-            buyer.click("#go-vet")
+            buyer.click("#go-vet")            # opens the order to the whole set
+            buyer.wait_for_timeout(600)
             fac.wait_for_selector("#order:not(.hide)", timeout=20000)
             fac.click("#prove")
             buyer.wait_for_function("() => window.__buyer.verdict !== null", timeout=25000)
