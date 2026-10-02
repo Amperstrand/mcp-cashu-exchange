@@ -17,7 +17,9 @@ real-world services.
 | `GET /api/search?category=&text=&lat=&lng=&radiusKm=` | generic registry search — the REST twin of every `*.search` MCP tool |
 
 **What is deployed right now, with verified example calls and a handover:**
-[docs/LIVE.md](docs/LIVE.md).
+[docs/LIVE.md](docs/LIVE.md). **Hackathon:** demo script with fallbacks —
+[docs/DEMO.md](docs/DEMO.md); the 24-hour run-up plan —
+[docs/ROADMAP-24H.md](docs/ROADMAP-24H.md).
 
 ## The idea
 
@@ -86,6 +88,11 @@ flowchart LR
     PROMPTS["onboarding prompts<br/>(table / platform / brand)"]
   end
 
+  subgraph NP["Numo POS — in flight (ai-legion lane)"]
+    NUMO["Numo Android POS<br/>Cashu tap-2-pay + Lightning"]
+    NBR["numo-bridge (private)<br/>paid basket to venue order"]
+  end
+
   subgraph EXT["External"]
     QR["qrv5.jamezz.app<br/>(venue API)"]
     MOL["Mollie hosted checkout"]
@@ -105,6 +112,9 @@ flowchart LR
   CHG --> OVP
   CHG --> KV
   JC --> QR --> MOL
+  NUMO -->|customer pays BTC| MINT
+  NUMO --> NBR --> JC
+  NBR -->|operator completes| MOL
   CARD --> MOL
   INBOX -. verification codes .-> B
 ```
