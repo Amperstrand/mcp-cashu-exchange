@@ -112,12 +112,29 @@ export function jamezzProvider(
       if (table === undefined) {
         return { kind: "generic", note: `unknown table ${mid}` };
       }
-      return (
-        (await snapshot(client, table)).details ?? {
-          kind: "generic",
-          note: table.note,
+      try {
+        const menu = await client.menu(table.mid);
+        if (menu !== null) {
+          return {
+            kind: "food",
+            venue: menu.venueName,
+            currency: menu.currency,
+            categories: menu.categories.map((category) => ({
+              name: category.name,
+              items: category.items.map((item) => ({
+                name: item.name,
+                price: item.price,
+              })),
+            })),
+          };
         }
-      );
+      } catch (error) {
+        if (!(error instanceof Error)) throw error;
+      }
+      return {
+        kind: "generic",
+        note: `QR table ${table.mid} · menu unavailable right now · ${table.note}`,
+      };
     },
   };
 }

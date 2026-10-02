@@ -21,6 +21,18 @@ const GenericDetails = z.object({
   note: z.string(),
 });
 
+const FoodDetails = z.object({
+  kind: z.literal("food"),
+  venue: z.string(),
+  currency: z.string(),
+  categories: z.array(
+    z.object({
+      name: z.string(),
+      items: z.array(z.object({ name: z.string(), price: z.number() })),
+    }),
+  ),
+});
+
 const ServiceRecordSchema = z.object({
   id: z.string(),
   providerId: z.string(),
@@ -29,7 +41,7 @@ const ServiceRecordSchema = z.object({
   location: GeoPoint.optional(),
   address: z.string().optional(),
   url: z.string().optional(),
-  details: z.union([ChargingDetails, GenericDetails]).optional(),
+  details: z.union([ChargingDetails, GenericDetails, FoodDetails]).optional(),
 });
 
 const CachedRecords = z.array(ServiceRecordSchema);

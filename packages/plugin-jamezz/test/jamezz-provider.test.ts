@@ -52,15 +52,17 @@ function fakeJamezz(): typeof fetch {
 }
 
 describe("jamezzProvider", () => {
-  it("returns a food record with venue, PSP, and a menu preview", async () => {
+  it("returns food records with venue, PSP, and menu previews for every mapped table", async () => {
     const provider = jamezzProvider({ fetchImpl: fakeJamezz() });
     const records = await provider.search({ category: "food" });
-    expect(records).toHaveLength(1);
-    const record = records[0];
-    expect(record?.name).toBe("Burgermeister Mehringdamm - QR (synthetic)");
-    expect(record?.category).toBe("food");
-    expect(record?.address).toContain("Mehringdamm");
-    const details = record?.details;
+    expect(records).toHaveLength(4);
+    const mehringdamm = records.find((r) => r.id.includes("8613S3X"));
+    if (mehringdamm === undefined)
+      throw new Error("expected the Mehringdamm record");
+    expect(mehringdamm.name).toBe("Burgermeister Mehringdamm - QR (synthetic)");
+    expect(mehringdamm.category).toBe("food");
+    expect(mehringdamm.address).toContain("Mehringdamm");
+    const details = mehringdamm.details;
     if (details?.kind !== "generic")
       throw new Error("expected generic details");
     expect(details.note).toContain("8613S3X");
@@ -68,7 +70,7 @@ describe("jamezzProvider", () => {
     expect(details.note).toContain("Cheeseburger 6.40 EUR");
   });
 
-  it("filters by text and answers details() for the same id", async () => {
+  it("filters by text and answers details() with the full menu", async () => {
     const provider = jamezzProvider({ fetchImpl: fakeJamezz() });
     expect(await provider.search({ category: "food", text: "oslo" })).toEqual(
       [],
@@ -79,21 +81,29 @@ describe("jamezzProvider", () => {
     });
     if (record === undefined) throw new Error("expected a record");
     const details = await provider.details(record.id);
-    if (details.kind !== "generic") throw new Error("expected generic details");
-    expect(details.note).toContain("Cheeseburger");
+    if (details.kind !== "food") throw new Error("expected food details");
+    expect(details.venue).toBe("Burgermeister Mehringdamm - QR (synthetic)");
+    expect(details.currency).toBe("EUR");
+    expect(details.categories[0]?.name).toBe("Burger");
+    expect(details.categories[0]?.items[0]).toEqual({
+      name: "Cheeseburger",
+      price: 6.4,
+    });
   });
 
-  it("degrades to the static entry when the venue API is unreachable", async () => {
+  it("degrades every table to its static entry when the venue API is unreachable", async () => {
     const broken: typeof fetch = (async () => {
       throw new Error("network down");
     }) as typeof fetch;
     const provider = jamezzProvider({ fetchImpl: broken });
     const records = await provider.search({ category: "food" });
-    expect(records).toHaveLength(1);
-    expect(records[0]?.name).toContain("Burgermeister");
-    const details = records[0]?.details;
-    if (details?.kind !== "generic")
-      throw new Error("expected generic details");
-    expect(details.note).toContain("venue API unreachable");
+    expect(records).toHaveLength(4);
+    for (const record of records) {
+      const details = record.details;
+      if (details?.kind !== "generic")
+        throw new Error("expected generic details");
+      expect(details.note).toContain("venue API unreachable");
+      expect(record.name.length).toBeGreaterThan(0);
+    }
   });
 });

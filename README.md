@@ -9,8 +9,9 @@ real-world services.
 
 | Route | What |
 |---|---|
-| `/` → `/demo` | redirects to the flagship chat demo at **chat.cashu.exchange** |
-| `/berlin` | Berlin cinema box-office chat (Cashu-settled, Yorck programme) |
+| `/` | enters the in-repo demo: redirects to `/berlin` |
+| `/berlin` | Berlin cinema box-office chat (Cashu-settled, Yorck programme) — **in this repo** |
+| `/demo` | links to the flagship favrit closed-beta chat — a private-kit deployment, not in this repo |
 | `/map.html` | Leaflet map of Berlin EV chargers (OSM/Overpass, KV-cached) |
 | `POST /mcp` | MCP server (streamable HTTP, stateless) |
 | `GET /api/services` · `/api/charging` | JSON surfaces for the map/other clients |
@@ -143,7 +144,7 @@ a table QR becomes a `JamezzClient` venue with zero credentials
 | Jamezz client + prompts + offline tests | [Amperstrand/jamezz](https://github.com/Amperstrand/jamezz) | done (1 table mapped) |
 | plugin-jamezz: venue tools on the exchange | `packages/plugin-jamezz` | done (live after next deploy) — discovery + menu preview; ordering deliberately stays in the jamezz package |
 | Numo POS + numo-bridge (customer pays Bitcoin → venue order) | private `numo-bridge` + Numo fork | **proven E2E 2026-10-02** — two live webhook payments, real venue order via jamezz, hosted checkout answered then abandoned; bridge dry-run by default |
-| Venue catalog growth (more QR mids) | jamezz `src/venues.ts` | 1 of ~18 Burgermeister locations; see its `docs/CANDIDATES.md` |
+| Venue catalog growth (more QR mids) | jamezz `src/venues.ts` | 4 tables live-verified (1 photographed + 3 venue-published, 2 countries); see its `docs/VENUES.md` |
 | Pecan (alternative-numeraire settlement) | catalog entry only | wiring not started |
 | Lightning rail | — | stretch |
 | jamezz npm publish | — | open decision |

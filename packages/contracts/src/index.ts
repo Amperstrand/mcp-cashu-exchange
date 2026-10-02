@@ -70,7 +70,20 @@ export interface GenericDetails {
   readonly note: string;
 }
 
-export type ServiceDetails = ChargingDetails | GenericDetails;
+export interface FoodDetails {
+  readonly kind: "food";
+  readonly venue: string;
+  readonly currency: string;
+  readonly categories: readonly {
+    readonly name: string;
+    readonly items: readonly {
+      readonly name: string;
+      readonly price: number;
+    }[];
+  }[];
+}
+
+export type ServiceDetails = ChargingDetails | GenericDetails | FoodDetails;
 
 export interface SearchQuery {
   readonly category: ServiceCategory;
