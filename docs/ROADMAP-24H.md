@@ -6,11 +6,16 @@ ai-legion (workspace `numo-pos`, poll with
 
 ## T-24 → T-22 — unblock and verify (owner: you, 10 minutes)
 
-1. **Set `CLOUDFLARE_API_TOKEN`** (repo secret; Workers Scripts:Edit +
-   Zone:Read). Issue #1. Everything merged goes live on the next push:
-   `jamezz.search`, `/api/search`, KV-cached searches, cinema fix,
-   card-free rail. Wrangler dry-run bundling already verified (376 KB gzip).
-2. Push any trivial commit to trigger deploy; confirm
+1. **Create the scoped Cloudflare token** (My Profile → API Tokens →
+   Create Custom Token): *Account → Workers Scripts → Edit* and
+   *Zone → Zone → Read*, account resource = your account only, zone
+   resource = `cashu.exchange` only.
+2. **Add it as an environment secret**: repo Settings → Environments →
+   `production` → secrets → `CLOUDFLARE_API_TOKEN` (+
+   `CLOUDFLARE_ACCOUNT_ID`). The `prod` branch and its protections are
+   already in place; the deploy job waits for a reviewer and the secrets
+   before doing anything.
+3. Merge `main` → `prod` (or approve the pending run), then confirm
    `curl mcp.cashu.exchange/health` and `/api/search?category=food` match
    `docs/LIVE.md`. Update LIVE.md's build-status paragraph.
 

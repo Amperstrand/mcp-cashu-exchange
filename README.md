@@ -174,12 +174,28 @@ Copy `.dev.vars.example` → `.dev.vars` for local secrets (gitignored).
 
 ## Deploy
 
-Continuous deployment on push to `main` (`.github/workflows/deploy.yml`) via
-`wrangler`. Required repo **secrets** (never committed — this repo is public):
+Deployments run **only from the protected `prod` branch** through the
+gated `production` environment (`.github/workflows/deploy.yml`). The flow:
 
-- `CLOUDFLARE_API_TOKEN` — scoped token: *Workers Scripts:Edit* +
-  *Zone:Read* (+ DNS:Edit in the `cashu.exchange` zone for the custom domain)
+1. PR → `main`: CI (leak gate + biome + typecheck + tests).
+2. PR `main` → `prod`: branch protection requires review and blocks force
+   pushes and deletion.
+3. Merge to `prod`: the workflow references the `production` environment,
+   which **requires a reviewer to approve before any secret is touched** —
+   any member can initiate, a second person signs off, the owner can
+   override (admin merge / `workflow_dispatch`).
+4. The job re-runs the full gates, then `wrangler deploy`.
+
+Secrets live **only as environment secrets on `production`** — never in the
+repo, never on `main`-only runs:
+
+- `CLOUDFLARE_API_TOKEN` — custom token, scoped to the one account and the
+  `cashu.exchange` zone: *Account → Workers Scripts → Edit*, *Zone → Zone →
+  Read* (add *DNS → Edit* only if routes change)
 - `CLOUDFLARE_ACCOUNT_ID`
+
+The worker serves **only `mcp.cashu.exchange`** (`workers_dev: false` in
+`apps/worker/wrangler.jsonc` — no `*.workers.dev` surface).
 
 Worker runtime secrets (`wrangler secret put`, per-name):
 

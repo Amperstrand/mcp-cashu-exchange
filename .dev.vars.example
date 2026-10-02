@@ -2,7 +2,7 @@
 # Production values go in `wrangler secret put` / GitHub Actions secrets.
 
 # Federated downstream MCP servers (JSON array; tokens live in per-name secrets).
-# Example: [{"name":"oda-mcp","url":"https://oda-mcp.example.workers.dev/mcp"}]
+# Example: [{"name":"oda-mcp","url":"https://oda-mcp.example/mcp"}]
 DOWNSTREAMS=
 
 # Note: there are no card variables anymore, on purpose.
