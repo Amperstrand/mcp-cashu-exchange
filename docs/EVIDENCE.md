@@ -1,8 +1,12 @@
 # Evidence pack — every claim, and where to verify it
 
-Snapshot taken **2026-10-02T07:02Z**. Re-verify any line with the command
-shown. The live worker runs the pre-`33e5343` build (deploy token pending,
-issue #1) — see [docs/LIVE.md](LIVE.md) for what that means.
+Snapshot **2026-10-02T07:02Z**, extended post-demo (18:50Z):
+demo delivered (reel + live beats; POS footage verified frame-by-frame),
+catalog at 4 live-verified tables, trust-lane PR #10 reviewed and approved
+(CI pending a formatting fix), demo assets committed under `docs/assets/`.
+Re-verify any line with the command shown. The live worker still runs the
+pre-`33e5343` build (deploy token pending, issue #1) — see
+[docs/LIVE.md](LIVE.md).
 
 ## Live service
 

@@ -1,5 +1,13 @@
 # Roadmap — the next 24 hours (hackathon run-up)
 
+> **Status 2026-10-02, post-demo:** the hackathon presentation is delivered.
+> Completed: the POS loop (proven E2E), the 4-venue catalog, the demo reel,
+> the presentation kit, contributor onboarding, and the deploy pipeline
+> (prod branch + reviewer-gated `production` environment). The only item
+> that never landed was the deploy token itself — everything merged is
+> live-on-next-deploy. Keep the blocks below as the historical run-up; the
+> forward view is the README component table plus issues.
+
 Owners: **you** = presenter/owner; **numo-dev** = the Herdr-managed agent on
 ai-legion (workspace `numo-pos`, poll with
 `herdr --machine ai-legion agent read numo-dev`); **here** = this session.

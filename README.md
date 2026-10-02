@@ -144,6 +144,7 @@ a table QR becomes a `JamezzClient` venue with zero credentials
 | Jamezz client + prompts + offline tests | [Amperstrand/jamezz](https://github.com/Amperstrand/jamezz) | done (1 table mapped) |
 | plugin-jamezz: venue tools on the exchange | `packages/plugin-jamezz` | done (live after next deploy) — discovery + menu preview; ordering deliberately stays in the jamezz package |
 | Numo POS + numo-bridge (customer pays Bitcoin → venue order) | private `numo-bridge` + Numo fork | **proven E2E 2026-10-02** — two live webhook payments, real venue order via jamezz, hosted checkout answered then abandoned; bridge dry-run by default |
+| Trust-ring vendor vetting (LSAG gate + real Cashu paid leg) | `packages/plugin-trust-ring` (PR #10) | reviewed + approved; CI blocked on formatting fix; answers to design questions on #11 |
 | Venue catalog growth (more QR mids) | jamezz `src/venues.ts` | 4 tables live-verified (1 photographed + 3 venue-published, 2 countries); see its `docs/VENUES.md` |
 | Pecan (alternative-numeraire settlement) | catalog entry only | wiring not started |
 | Lightning rail | — | stretch |
