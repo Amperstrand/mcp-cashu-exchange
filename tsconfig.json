@@ -23,7 +23,10 @@
       "@exchange/plugin-pay-2fiat": [
         "./packages/plugin-pay-2fiat/src/index.ts"
       ],
-      "@exchange/plugin-jamezz": ["./packages/plugin-jamezz/src/index.ts"]
+      "@exchange/plugin-jamezz": ["./packages/plugin-jamezz/src/index.ts"],
+      "@exchange/plugin-trust-ring": [
+        "./packages/plugin-trust-ring/src/index.ts"
+      ]
     }
   },
   "include": ["packages/*/src", "packages/*/test", "apps/worker/src"]

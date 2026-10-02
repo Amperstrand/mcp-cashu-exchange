@@ -23,3 +23,15 @@ coverage/
 identity.json
 session.json
 cookies.txt
+
+# e2e harness
+!packages/plugin-trust-ring/e2e/dist/
+!packages/plugin-trust-ring/e2e/dist/trust-ring.bundle.js
+packages/plugin-trust-ring/e2e/videos/
+# the recorded walkthrough IS committed (<5MB) — it is the deliverable Amperstrand watches
+
+# worker e2e: raw video is scratch
+apps/worker/e2e/videos/
+
+# narrated-demo recordings (regenerable: record_narrated.py)
+apps/worker/e2e/videos-narrated/
