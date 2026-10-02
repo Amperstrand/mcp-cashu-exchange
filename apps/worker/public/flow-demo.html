@@ -32,11 +32,11 @@
   <div class="stage">
     <div class="pane">
       <div class="label">&#128100; <b>buyer</b> — order.html (the verifier)</div>
-      <iframe id="buyer" src="./order.html" title="buyer"></iframe>
+      <iframe id="buyer" title="buyer"></iframe>
     </div>
     <div class="pane">
       <div class="label">&#128666; <b>facilitator</b> — facilitator.html (the prover)</div>
-      <iframe id="fac" src="./facilitator.html" title="facilitator"></iframe>
+      <iframe id="fac" title="facilitator"></iframe>
     </div>
   </div>
 <script>
@@ -45,6 +45,13 @@
     document.querySelector("#caption").innerHTML =
       `<span>step ${n}</span>${text}`;
   };
+  // Forward the demo's query string (?mint=...) into both panes. The two panes
+  // MUST share an origin and a mint: the token hand-off travels over
+  // BroadcastChannel, so a differing mint would leave the facilitator unable to
+  // redeem what the buyer minted (and the paid leg would look "broken").
+  const q = location.search;
+  document.getElementById("buyer").src = "./order.html" + q;
+  document.getElementById("fac").src = "./facilitator.html" + q;
   window.__demo = { ready: true };
 </script>
 </body>

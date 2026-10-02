@@ -32,3 +32,6 @@ packages/plugin-trust-ring/e2e/videos/
 
 # worker e2e: raw video is scratch
 apps/worker/e2e/videos/
+
+# narrated-demo recordings (regenerable: record_narrated.py)
+apps/worker/e2e/videos-narrated/
