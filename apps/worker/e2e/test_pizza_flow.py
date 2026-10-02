@@ -45,6 +45,12 @@ MINT = "https://cdk-a056e0f.cashu.exchange"   # the mint apps/worker/src/cashu-s
 PORT = 8791
 CDP_PORT = 9334
 VIEWPORT = {"width": 1280, "height": 860}
+# E2E_BASE=<origin> runs the SAME assertions against a deployed client (an nsite or
+# a VPS host) instead of the local http.server. This is the deployed smoke test:
+# it catches CORS to the mint, bundle paths, and any origin-specific difference
+# that a file-level check misses. Both pages must share one origin — the token
+# hand-off rides a BroadcastChannel.
+BASE = os.environ.get("E2E_BASE", "").rstrip("/")
 
 results = []
 
@@ -71,7 +77,7 @@ def main():
     VIDEO_DIR.mkdir(parents=True, exist_ok=True)
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
 
-    httpd = subprocess.Popen(
+    httpd = None if BASE else subprocess.Popen(
         [sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1",
          "--directory", str(PUBLIC)],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
@@ -83,15 +89,19 @@ def main():
          "--window-size=1280,860"],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
     )
-    ok_servers = wait_port(PORT) and wait_port(CDP_PORT)
+    ok_servers = wait_port(CDP_PORT) and (True if BASE else wait_port(PORT))
     if not ok_servers:
         print("FATAL: server/chrome did not come up", file=sys.stderr)
-        httpd.terminate(); chrome.terminate()
+        if httpd: httpd.terminate()
+        chrome.terminate()
         return 1
-    print(f"✓ http.server :{PORT} and Chrome CDP :{CDP_PORT} up", flush=True)
+    if BASE:
+        print(f"✓ deployed client {BASE} + Chrome CDP :{CDP_PORT} up (no local server)", flush=True)
+    else:
+        print(f"✓ http.server :{PORT} and Chrome CDP :{CDP_PORT} up", flush=True)
 
-    buyer_url = f"http://127.0.0.1:{PORT}/order.html"
-    fac_url = f"http://127.0.0.1:{PORT}/facilitator.html"
+    buyer_url = (BASE or f"http://127.0.0.1:{PORT}") + "/order.html"
+    fac_url = (BASE or f"http://127.0.0.1:{PORT}") + "/facilitator.html"
     # E2E_MINT=<url> points both pages at another mint. testnut auto-pays its own
     # quotes, which is the only way to exercise the PAID LEG end to end without a
     # funded wallet; the signet mint needs a real signet payment first.
@@ -282,10 +292,12 @@ def main():
                 json.dumps(mapping, indent=2) + "\n")
             browser.close()
     finally:
-        httpd.terminate()
+        if httpd:
+            httpd.terminate()
         chrome.terminate()
         try:
-            httpd.wait(timeout=5)
+            if httpd:
+                httpd.wait(timeout=5)
         except Exception:
             pass
         try:
