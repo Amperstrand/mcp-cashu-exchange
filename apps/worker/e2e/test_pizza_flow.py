@@ -265,8 +265,21 @@ def main():
                   "outside" in (direct or "").lower() or "trust set" in (direct or "").lower(),
                   str(direct))
 
-            buyer.close()
+            # Deterministic page -> video mapping. Playwright's filenames carry no
+            # page identity, and the recording itself is only flushed when the
+            # CONTEXT closes (closing a page alone produced nothing here), so keep
+            # the Video handles and ask them for their paths right after ctx.close().
+            buyer_video_obj, fac_video_obj = buyer.video, fac.video
             ctx.close()
+            mapping = {}
+            for tag, vid in (("buyer", buyer_video_obj), ("facilitator", fac_video_obj)):
+                try:
+                    mapping[tag] = str(vid.path()) if vid is not None else None
+                except Exception as e:      # pragma: no cover - depends on playwright
+                    print(f"WARN: could not resolve {tag} video path: {e!r}", flush=True)
+                    mapping[tag] = None
+            (REPORT_DIR / "page-videos.json").write_text(
+                json.dumps(mapping, indent=2) + "\n")
             browser.close()
     finally:
         httpd.terminate()
@@ -286,6 +299,41 @@ def main():
         print("FATAL: no video recorded", file=sys.stderr)
         return 1
     src = webms[0]
+    # Both actors, side by side: BUYER on the left, FACILITATOR on the right.
+    # The harness records one webm per page in the SAME context (shared storage is
+    # required for the token hand-off) and Playwright's filenames carry no page
+    # identity, so the mapping comes from closing the pages in a known order
+    # (page-videos.json); without it we fall back to write order and say so.
+    order = list(webms)
+    mapping_file = REPORT_DIR / "page-videos.json"
+    if mapping_file.exists():
+        m = json.loads(mapping_file.read_text())
+        # A null entry means Playwright could not resolve that video: fall back to
+        # write order rather than crashing on Path(None) after 19 green assertions.
+        if m.get("buyer") and m.get("facilitator"):
+            pair = [Path(m["buyer"]), Path(m["facilitator"])]
+            if all(p.exists() for p in pair):
+                order = pair
+            else:
+                print("WARN: page-videos.json names missing files; using write order", flush=True)
+        else:
+            print(f"WARN: unresolvable page videos ({m}); using write order", flush=True)
+    else:
+        print("WARN: no page-videos.json; left/right identity is NOT verified", flush=True)
+    if len(order) >= 2:
+        both = REPORT_DIR / "pizza-e2e-both-actors.mp4"
+        fc = ("[0:v]scale=640:360,setsar=1[a];"
+              "[1:v]scale=640:360,setsar=1[b];[a][b]hstack=inputs=2[v]")
+        conv2 = subprocess.run(
+            ["/usr/bin/ffmpeg", "-y", "-i", str(order[0]), "-i", str(order[1]),
+             "-filter_complex", fc, "-map", "[v]", "-c:v", "libx264",
+             "-pix_fmt", "yuv420p", "-preset", "medium", "-crf", "24", str(both)],
+            capture_output=True, text=True)
+        if conv2.returncode == 0:
+            print(f"\n── both-actors video (buyer left, facilitator right) ── {both} "
+                  f"({both.stat().st_size} bytes)", flush=True)
+        else:
+            print(f"WARN: both-actors compose failed\n{conv2.stderr[-800:]}", flush=True)
     print(f"\n── video ──\nsource {src.name} ({src.stat().st_size} bytes)", flush=True)
     conv = subprocess.run(
         ["/usr/bin/ffmpeg", "-y", "-i", str(src), "-c:v", "libx264", "-pix_fmt", "yuv420p",
