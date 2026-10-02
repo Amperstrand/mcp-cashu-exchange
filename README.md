@@ -1,5 +1,11 @@
 # mcp.cashu.exchange
 
+> **Successor:** the unified order platform **DropShop** (working title) lives at
+> <https://api.cashu.exchange> in
+> [Amperstrand/mcp-oda](https://github.com/Amperstrand/mcp-oda) — chat, fleet
+> console, map, and MCP over one 402-gated pipeline (demo tier). This repo
+> remains the Berlin hackathon exchange scaffold.
+
 A **modular MCP service exchange**: one registry, one gateway, and swappable
 payment rails for payable services — EV charging, food, and more. Built as a
 hackathon project (Berlin, 2026) to let AI agents *discover* and *pay for*
