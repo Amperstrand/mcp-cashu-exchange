@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { serviceId } from "@exchange/contracts";
 import { jamezzProvider } from "../src/index.js";
 
 const ORIGIN = "https://qrv5.jamezz.app";
@@ -105,5 +106,23 @@ describe("jamezzProvider", () => {
       expect(details.note).toContain("venue API unreachable");
       expect(record.name.length).toBeGreaterThan(0);
     }
+  });
+
+  it("details() answers unknown tables with a generic note, never a throw", async () => {
+    const provider = jamezzProvider({ fetchImpl: fakeJamezz() });
+    const details = await provider.details(serviceId("jamezz:table:NOPE01"));
+    if (details.kind !== "generic") throw new Error("expected generic details");
+    expect(details.note).toContain("unknown table NOPE01");
+  });
+
+  it("details() degrades to static when the platform answers but the menu is absent (null, not a network error)", async () => {
+    const menuless: typeof fetch = (async () => {
+      return new Response("nope", { status: 500 });
+    }) as typeof fetch;
+    const provider = jamezzProvider({ fetchImpl: menuless });
+    const details = await provider.details(serviceId("jamezz:table:8613S3X"));
+    if (details.kind !== "generic") throw new Error("expected generic details");
+    expect(details.note).toContain("menu unavailable right now");
+    expect(details.note).toContain("8613S3X");
   });
 });
