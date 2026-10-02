@@ -173,7 +173,7 @@
       state.ring = "[own key] + 3 of the buyer's";
       state.impersonating = true;
     } else {
-      ringIndices = pending.ringIndices;
+      ringIndices = ringFor(state.memberIdx, members.length);
       state.ring = ringIndices.map((i) => members[i].label);
     }
     $("#o-ring").innerHTML = state.impersonating
@@ -184,7 +184,19 @@
       : `Ring of ${ringIndices.length} drawn from their ${members.length}. Your key image is locked to this order, one use.`;
     $("#prove").disabled = false;
     $("#prove").textContent = state.impersonating
-      ? "Attempt proof (impostor)" : "Prove & accept order";
+      ? "Attempt proof (impostor)" : "Prove & claim this order";
+  }
+
+  // Draw a ring around OUR OWN key: position 0 is us, the rest are other members of the
+  // buyer's pinned set. The buyer no longer dictates a ring or a winner — the claimant
+  // builds its own ring, which is what makes "any member may claim this order" work.
+  function ringFor(idx, n) {
+    const out = [idx];
+    for (let step = 1; out.length < (pending?.ringSize || 4); step++) {
+      const c = (idx + step * 2 - 1) % n;
+      if (!out.includes(c)) out.push(c);
+    }
+    return out;
   }
 
   async function sendProof() {
@@ -235,7 +247,7 @@
     if (m.type === "ORDER") {
       pending = m;
       state.order = m.order;
-      state.chosenLabel = m.label;
+      state.openOrder = m.open === true;   // an open order: no counterparty is named
       state.trustSet = m.trustSet;
       $("#noorder").classList.add("hide");
       $("#order").classList.remove("hide");

@@ -134,13 +134,17 @@ def main():
                   pinned["members"] == 8 and pinned["setId"] == "pizza-facilitators-berlin",
                   f"{pinned['members']} members, hash {pinned['hash'][:12]}…")
 
-            # ── happy path ───────────────────────────────────────────────────
+            # ── happy path: the buyer does NOT choose a counterparty ─────────
             buyer.click("#go-menu")
             buyer.click("#go-choose")
-            buyer.click('#fac-list [data-fac="0"]')
-            buyer.click("#go-vet")
+            can_choose = buyer.evaluate("() => window.__buyer.canChoose")
+            chosen = buyer.evaluate("() => window.__buyer.chosen")
+            check("the buyer cannot pick a counterparty (the set is data, not a menu)",
+                  can_choose is False and chosen is None,
+                  f"canChoose={can_choose} chosen={chosen}")
+            buyer.click("#go-vet")            # opens the order to the whole set
             fac.wait_for_selector("#order:not(.hide)", timeout=15000)
-            fac.click("#prove")
+            fac.click("#prove")               # the first valid proof claims it
             buyer.wait_for_function("() => window.__buyer.verdict !== null", timeout=20000)
 
             v = buyer.evaluate("() => window.__buyer.verdict")
@@ -151,6 +155,30 @@ def main():
             check("all six displayed checks pass", all(c["ok"] for c in checks),
                   ", ".join(f"{'ok' if c['ok'] else 'FAIL'}:{c['label'][:38]}" for c in checks))
             check("anonymity set = ring size 4", anon == 4, f"anonymitySetSize={anon}")
+
+            # ── the winner is not identified to the buyer ─────────────────────
+            banner = buyer.evaluate("() => document.querySelector('#vet-banner').textContent")
+            claimant = buyer.evaluate("() => window.__buyer.roster.members[0].label")
+            check("the accepted claimant is NOT identified in the verdict",
+                  claimant not in banner,
+                  f"banner must not contain {claimant!r}")
+            check("the verdict states the identity was not revealed",
+                  "identity not revealed" in banner.lower(), banner.strip()[:80])
+            check("the buyer holds no identity for its counterparty",
+                  buyer.evaluate("() => window.__buyer.counterpartyIdentity") is None,
+                  "counterpartyIdentity is null")
+
+            # ── first valid proof wins: a later claim cannot take the order ───
+            fac.select_option("#role", "member:3")     # a DIFFERENT member of the same set
+            fac.click("#prove")
+            buyer.wait_for_function("() => window.__buyer.claimRejected !== null", timeout=20000)
+            rej = buyer.evaluate("() => window.__buyer.claimRejected")
+            check("a later valid claim on a claimed order is refused",
+                  bool(rej) and rej["ok"] is False and "already claimed" in (rej.get("reason") or ""),
+                  f"reason={rej.get('reason')!r}")
+            check("the accepted verdict survives the late claim",
+                  buyer.evaluate("() => window.__buyer.verdict.ok") is True,
+                  "verdict.ok is still true (a late claim must not un-verify the order)")
 
             # ── attack: replay ───────────────────────────────────────────────
             buyer.click("#atk-replay")
@@ -242,15 +270,17 @@ def main():
                       f"mint state={live.get('state') if live else None}")
 
             # ── negative: a ring containing an outside key ───────────────────
+            # The impostor attempt is driven from the CLAIMANT side now — the buyer no
+            # longer picks anyone, so "act as an impostor" is the facilitator's own choice.
             buyer.goto(buyer_url)
             buyer.wait_for_function("() => window.__buyer && window.__buyer.ready === true", timeout=20000)
             fac.goto(fac_url)
             fac.wait_for_function("() => window.__facilitator && window.__facilitator.roster", timeout=20000)
             buyer.click("#go-menu")
             buyer.click("#go-choose")
-            buyer.click('#fac-list [data-fac="outsider"]')
             buyer.click("#go-vet")
             fac.wait_for_selector("#order:not(.hide)", timeout=15000)
+            fac.select_option("#role", "impostor")
             fac.click("#prove")
             buyer.wait_for_function("() => window.__buyer.verdict !== null", timeout=20000)
             bad = buyer.evaluate("() => window.__buyer.verdict")

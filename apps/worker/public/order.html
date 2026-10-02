@@ -135,11 +135,13 @@
       <div class="cta"><button class="wide" id="go-choose">Checkout</button></div>
     </section>
 
-    <!-- 3 CHOOSE FACILITATOR -->
+    <!-- 3 YOUR SET IS DATA — YOU DO NOT PICK FROM IT -->
     <section data-screen="choose" class="hide">
-      <h2>Who fulfils it?</h2>
+      <h2>Who is in your set?</h2>
       <p style="margin-top:6px">Napoli makes the pizza. A <b style="color:var(--text)">facilitator</b>
-        carries it and settles the sats. You only pay a facilitator who can prove they are in your trust set.</p>
+        carries it and settles the sats. You decide <b style="color:var(--text)">who may</b> carry your
+        orders — never which one does. The order is opened to the whole set: the first member who
+        proves membership becomes your counterparty, and your client never learns which one it was.</p>
       <div id="fac-list" style="margin-top:12px;display:flex;flex-direction:column;gap:8px"></div>
       <div class="card" style="background:var(--panel2)">
         <h3>Your pinned trust set</h3>
@@ -148,14 +150,16 @@
         <div class="kv"><span>Published</span><span id="pin-published">—</span></div>
         <div class="kv"><span>Version hash</span><span class="mono" id="pin-hash">—</span></div>
       </div>
-      <div class="cta"><button class="wide" id="go-vet" disabled>Continue — verify facilitator</button></div>
+      <div class="cta"><button class="wide" id="go-vet">Open the order — first valid proof wins</button></div>
+      <p class="note" style="margin-top:8px">Nothing names a winner up front, and the claimant's own
+        claimed identity is ignored: a ring proof shows membership, not who sent it.</p>
     </section>
 
     <!-- 4 VETTING -->
     <section data-screen="vetting" class="hide">
-      <h2 id="vet-head">Verifying the facilitator</h2>
+      <h2 id="vet-head">Verifying the claimant</h2>
       <div id="vet-wait" class="card center"><span class="spin"></span>
-        <p style="margin-top:8px">Waiting for the facilitator to prove membership…</p></div>
+        <p style="margin-top:8px">Waiting for a member of your set to prove membership…</p></div>
 
       <div id="vet-result" class="hide" style="display:flex;flex-direction:column;gap:12px">
         <div id="vet-banner" class="banner ok center"></div>
@@ -256,6 +260,7 @@
   const state = window.__buyer = {
     screen: "discover", order: ORDER, pin: null, trustSet: null,
     roster: null, chosen: null, proof: null, verdict: null,
+    canChoose: false, claiming: false, claimed: false, claimRejected: null,
     checks: [], attacks: {}, anonymitySetSize: null, keyImage: null,
     realQuote: null, gateReason: null, mintState: null, invoiceNetwork: null,
     paymentConfirmed: false,
@@ -316,25 +321,27 @@
     const list = $("#fac-list");
     const members = state.roster.members.slice(0, 3);
     list.innerHTML = members.map((m, i) => `
-      <div class="card row" data-fac="${i}" style="cursor:pointer">
+      <div class="card row" data-fac="${i}">
         <div class="grow">
           <div class="title">${m.label}</div>
           <div class="sub">${m.deliveries} deliveries · ★ ${m.rating} · ${m.basis}</div>
           <div style="margin-top:6px"><span class="pill ok">✓ in your trust set</span></div>
         </div></div>`).join("") + `
-      <div class="card row" data-fac="outsider" style="cursor:pointer;opacity:.8">
+      <div class="card row" data-fac="outsider" style="opacity:.8">
         <div class="grow">
           <div class="title">Anon Delivery</div>
           <div class="sub">new · no history</div>
           <div style="margin-top:6px"><span class="pill no">not in your set — payment blocked</span></div>
         </div></div>`;
-    list.querySelectorAll("[data-fac]").forEach((el) => el.addEventListener("click", () => {
-      state.chosen = el.dataset.fac;
-      list.querySelectorAll(".card").forEach((c) => c.style.borderColor = "var(--border)");
-      el.style.borderColor = "var(--accent)";
-      $("#go-vet").disabled = false;
-      $("#go-vet").textContent = `Continue — verify ${el.querySelector(".title").textContent}`;
-    }));
+    // Deliberately NOT selectable. Letting the buyer point at a counterparty is the buyer
+    // choosing a vendor — the exact thing the pinned-set design exists to remove. The set
+    // is data the buyer curates once; the order is then open to all of it, and the first
+    // member to produce a valid proof claims it (see onProof). This list is only here so
+    // the buyer can see who they admitted.
+    state.canChoose = false;
+    state.chosen = null;
+    $("#go-vet").disabled = false;
+    $("#go-vet").textContent = "Open the order — first valid proof wins";
   }
 
   // ── vetting: the real policy decides ─────────────────────────────────────
@@ -354,26 +361,49 @@
     $("#go-pay").disabled = true;
     $("#retry").classList.add("hide");
 
-    const chosenIdx = state.chosen === "outsider" ? 0 : Number(state.chosen);
-    const ringIndices = ringFor(chosenIdx, state.trustSet.members.length);
+    state.claiming = true;
+    state.claimed = false;
+    $("#go-vet").disabled = true;
+    $("#go-vet").textContent = "Waiting for a member of your set…";
+
+    // The order goes out OPEN: no counterparty is named, no ring is dictated, and nothing
+    // is disclosed about who should answer. Any member of the pinned set may claim it, and
+    // the first valid proof wins. (The set itself travels because the claimant needs it to
+    // build a ring — it is the buyer's own public list.)
     CH.postMessage({
       type: "ORDER",
       order: { ...ORDER, pin: state.pin },
       trustSet: state.trustSet,
       pin: state.pin,
       ringSize: RING_SIZE,
-      chosenIdx: state.chosen === "outsider" ? null : chosenIdx,
-      label: state.chosen === "outsider" ? "Anon Delivery" : state.roster.members[chosenIdx].label,
-      impostor: state.chosen === "outsider",
-      ringIndices,
+      open: true,
     });
   }
 
   async function onProof(msg) {
+    // FIRST CLAIM WINS. Once a valid proof has claimed this order, any later claim is
+    // refused outright — otherwise a slower member could outbid the one already told they
+    // hold it, and the buyer could end up with two facilitators both believing they own it.
+    if (state.claimed) {
+      // Keep the ACCEPTED verdict intact — only the late claim is rejected. Overwriting
+      // state.verdict here would make the buyer look unverified and block its own payment.
+      state.claimRejected = { ok: false,
+                              reason: "this order is already claimed by another member" };
+      $("#vet-banner").className = "banner err";
+      $("#vet-banner").innerHTML =
+        `<div style="font-weight:700;color:var(--err);font-size:15px">Refused — this order is
+           already claimed by a member of your set</div>
+         <p style="margin-top:6px;color:var(--text)">A valid proof arrived first. Only one
+           facilitator can hold an order.</p>`;
+      return;
+    }
     $("#vet-wait").classList.add("hide");
     $("#vet-result").classList.remove("hide");
     state.proof = msg.proof;
-    state.facilitator = msg.label;
+    // msg.label is the claimant's OWN unauthenticated claim about who they are. We ignore
+    // it: a ring proof establishes membership in the pinned set, not identity, and storing
+    // it would hand the buyer exactly the link the ring exists to hide.
+    state.counterpartyIdentity = null;
 
     const seen = T.createSeenSet();
     state.seen = seen;
@@ -417,16 +447,22 @@
       : "";
 
     if (result.ok) {
+      state.claimed = true;
+      state.claiming = false;
+      state.counterpartyIdentity = null;
       $("#vet-banner").className = "banner ok center";
       $("#vet-banner").innerHTML = `VERIFIED — a member of your trust set signed this order.<br>
-        <span style="font-weight:600;font-size:12px;color:var(--text)">We did not learn <i>which</i> one.</span>`;
+        <span style="font-weight:600;font-size:12px;color:var(--text)">Identity not revealed —
+          we did not learn <i>which</i> member took it.</span>`;
       $("#go-pay").disabled = false;
       $("#retry").classList.add("hide");
     } else {
+      // A refusal does NOT close the order: the claim window stays open for the next member.
       $("#vet-banner").className = "banner err";
       $("#vet-banner").innerHTML = `<div style="font-weight:700;color:var(--err);font-size:15px">
-          Payment blocked — ${msg.label} could not prove membership in your trust set</div>
-        <p style="margin-top:6px;color:var(--text)">No valid proof, no order. Your sats did not move.</p>
+          Payment blocked — the claimant could not prove membership in your trust set</div>
+        <p style="margin-top:6px;color:var(--text)">No valid proof, no order. Your sats did not
+          move, and the order is still open.</p>
         <div class="mono" style="margin-top:8px">reason: ${result.reason}</div>`;
       $("#go-pay").disabled = true;
       $("#retry").classList.remove("hide");
