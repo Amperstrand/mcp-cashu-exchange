@@ -13,7 +13,7 @@ Everything you will see is open-source and leak-gated.
 | 2 | Pay for cinema with ecash | /berlin chat → offer → pay with a Testnut Cashu token → settled | Pre-captured screenshot of the settled offer |
 | 3 | Real food, real venue | `npx jamezz menu 8613S3X` — the live Burgermeister Mehringdamm menu with EUR prices | Terminal recording (the CLI output is text) |
 | 4 | Customer-facing POS | Numo on the phone: Burgermeister catalog, customer pays Cashu tap-2-pay (Testnut mint) | Emulator on the projector; or the Lightning QR tab |
-| 5 | The order reaches the venue | numo-bridge places the order via the jamezz API → Mollie checkout URL → **the operator** completes it with their own card; order status shows `payStatus`, kitchen not fired until paid | Free-pipeline variant: submit, show order id + status, abandon at Mollie — costs nothing, proves the pipe |
+| 5 | The order reaches the venue | **Proven E2E 2026-10-02**: two live webhook payments (Cashu + Lightning) drove the loop; the venue order was created and the hosted checkout answered — on stage, the operator completes it with their own card; order status shows `payStatus`, kitchen not fired until paid | Free-pipeline variant: submit, show order id + status, abandon at Mollie — costs nothing, proves the pipe |
 | 6 | Why this is safe to open-source | Leak gates in CI, card-free repos by design, worker holds no card, collaborator audit done | This is a slide, not a demo — never fails |
 
 Beat 5 is the differentiator — say it explicitly: **"The customer pays
@@ -29,6 +29,9 @@ number ever entered a repo, a secret, or a tool response."**
   show, and it stays in a human hand.**
 - `CLOUDFLARE_API_TOKEN` set — beats 1–2 live vs local depend on it.
 - Terminal with the jamezz repo cloned, Node 22+.
+- Evidence screenshots (operator page, settled offers) — **local copies
+  only, never committed**: a checkout-page screenshot can contain a live
+  payment session link.
 - Charger, spare phone, exported screenshots in a folder as last resort.
 
 ## What we built (progress slide material)

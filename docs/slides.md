@@ -79,6 +79,10 @@ Full diagram: README · Verified surfaces: docs/LIVE.md
 - Catalog loaded from our API — the real menu, real prices
 - Customer-side rail needs no account, no card, no KYC
 
+**Proven 2026-10-02:** two live webhook payments (Cashu + Lightning)
+drove the full loop — the venue accepted the order and the hosted
+checkout answered.
+
 ---
 
 # The venue gets paid its way
@@ -122,8 +126,10 @@ Everything merged goes public the moment the deploy token is set.
 - Day 1: extraction → **two leak-gated public repos**; card-free refactor;
   collaborator + card audit; architecture + live docs
 - Day 2: typed client, offline test suites, CLI, generic REST surface,
-  plugin-jamezz, **Numo POS integration in flight**
-- Method documented as prompts — new venue ≈ one photograph
+  plugin-jamezz — and **the POS loop proven end to end**
+  (live payments → real venue order → hosted checkout)
+- Platform drift found in the wild (jamezz-v2.0) → filed → fixed upstream
+  same day, with tests
 
 ---
 

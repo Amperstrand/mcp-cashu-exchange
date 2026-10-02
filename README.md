@@ -142,6 +142,7 @@ a table QR becomes a `JamezzClient` venue with zero credentials
 | Cashu settlement (chat offers → Testnut mint) | `apps/worker/src/cashu-settle.ts` | done |
 | Jamezz client + prompts + offline tests | [Amperstrand/jamezz](https://github.com/Amperstrand/jamezz) | done (1 table mapped) |
 | plugin-jamezz: venue tools on the exchange | `packages/plugin-jamezz` | done (live after next deploy) — discovery + menu preview; ordering deliberately stays in the jamezz package |
+| Numo POS + numo-bridge (customer pays Bitcoin → venue order) | private `numo-bridge` + Numo fork | **proven E2E 2026-10-02** — two live webhook payments, real venue order via jamezz, hosted checkout answered then abandoned; bridge dry-run by default |
 | Venue catalog growth (more QR mids) | jamezz `src/venues.ts` | 1 of ~18 Burgermeister locations; see its `docs/CANDIDATES.md` |
 | Pecan (alternative-numeraire settlement) | catalog entry only | wiring not started |
 | Lightning rail | — | stretch |

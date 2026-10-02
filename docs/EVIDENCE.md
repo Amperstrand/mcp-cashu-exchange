@@ -47,17 +47,29 @@ Open by design: exchange #1 (deploy token — owner action), jamezz #4
 Verify: `gh issue list -R Amperstrand/mcp-cashu-exchange --state all`,
 `gh issue list -R Amperstrand/jamezz --state all`.
 
-## In flight
+## Proven E2E — the POS loop (2026-10-02)
 
-- **Numo POS integration** (ai-legion, Herdr-managed agent `numo-dev`,
-  workspace `numo-pos`): Android POS showing the Burgermeister menu,
-  Cashu/Lightning customer payment, order placement through the jamezz API,
-  operator completes the venue checkout. Status: working (checked at
-  snapshot time). Its design doc will land as `INTEGRATION.md` in the
-  private `numo-bridge` repo.
-- Everything already merged and waiting on the deploy token: `jamezz.search`
-  (food + live menu preview), generic `/api/search`, KV-cached searches,
-  cinema name matching, card-free `payment.quote`.
+- **Numo POS integration** (ai-legion, Herdr-managed agent `numo-dev`):
+  Numo fork (v1.9 base) + private `numo-bridge` (converter, bridge,
+  demo-payer; 24 tests green).
+- **Two live customer payments** drove the loop end to end over the webhook
+  — one Cashu/nostr, one Lightning.
+- **A real guest order reached the venue** through `prepare()+submit()` and
+  the hosted checkout answered HTTP 200, then was abandoned per the
+  no-payment-during-rehearsal rule (order and session identifiers withheld
+  from public repos on purpose — see jamezz `docs/ORDERING.md`; evidence
+  lives in the private bridge repo and local screenshots).
+- The integration surfaced real platform drift (jamezz-v2.0 shapes), filed
+  as jamezz#5 and **fixed upstream the same day** (commit `77920fa`, 22
+  offline tests) — the quirk → test → lesson loop working as designed.
+- Bridge runs dry-run by default (`ALLOW_SUBMIT` off); secrets in `0600`
+  files outside git, history scan clean.
+
+## Waiting on the deploy token
+
+Everything merged and live-on-next-deploy: `jamezz.search` (food + live
+menu preview), generic `/api/search`, KV-cached searches, cinema name
+matching, card-free `payment.quote`.
 
 ## Documentation index
 

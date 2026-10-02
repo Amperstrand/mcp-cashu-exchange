@@ -16,17 +16,13 @@ ai-legion (workspace `numo-pos`, poll with
 
 ## T-22 → T-16 — POS integration lands (owner: numo-dev)
 
-Phase 0/1: APK built, `INTEGRATION.md` written, Burgermeister catalog
-imported into Numo, screenshot captured. Known risk already hit:
-**ai-legion disk is 100% full** (agent shrank the AVD to a 2G partition).
-Preferred fix: install Numo on the physical device `ZY326DPC7R` and demo on
-hardware — better on stage anyway. Fallback: free disk on ai-legion or run
-the emulator on ai-legion-small.
-
-Phase 2: numo-bridge (private repo) — operator taps the paid basket →
-jamezz `prepare()+submit()` → Mollie URL rendered as link + QR. One
-free-pipeline order test during venue opening hours (submit, show status,
-abandon — never pay during rehearsal unless it is the final demo).
+**Status 2026-10-02: proven early.** APK built, catalog imported, bridge
+live (24 tests), two webhook payments (Cashu + Lightning) drove a real
+venue order through `prepare()+submit()`; checkout answered HTTP 200 and
+was abandoned per the no-payment rule. The drift it surfaced (jamezz#5)
+is fixed upstream (`77920fa`). Remaining in this block: un-shim the bridge
+onto the fixed package (in progress), one optional re-verify during venue
+hours, move to the physical phone for the stage.
 
 ## T-16 → T-12 — make it concrete (owner: you + here)
 
