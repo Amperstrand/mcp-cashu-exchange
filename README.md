@@ -19,7 +19,10 @@ real-world services.
 **What is deployed right now, with verified example calls and a handover:**
 [docs/LIVE.md](docs/LIVE.md). **Hackathon:** demo script with fallbacks —
 [docs/DEMO.md](docs/DEMO.md); the 24-hour run-up plan —
-[docs/ROADMAP-24H.md](docs/ROADMAP-24H.md).
+[docs/ROADMAP-24H.md](docs/ROADMAP-24H.md); the slide deck —
+[rendered](https://amperstrand.github.io/mcp-cashu-exchange/slides.html) ·
+[source](docs/slides.md); every claim and how to verify it —
+[docs/EVIDENCE.md](docs/EVIDENCE.md).
 
 ## The idea
 

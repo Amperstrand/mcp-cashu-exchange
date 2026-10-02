@@ -68,5 +68,5 @@ Verify: `gh issue list -R Amperstrand/mcp-cashu-exchange --state all`,
 | [ROADMAP-24H.md](ROADMAP-24H.md) | the 24-hour run-up plan + risk register |
 | [LIVE.md](LIVE.md) | deployed-today surface with verified calls |
 | [PAYMENT.md](PAYMENT.md) | the own-card payment pattern |
-| [slides.md](slides.md) | the presentation deck (Marp) |
+| [slides.md](slides.md) | the presentation deck (Marp) — rendered: <https://amperstrand.github.io/mcp-cashu-exchange/slides.html> |
 | [jamezz docs](https://github.com/Amperstrand/jamezz/tree/main/docs) | ordering, venues, candidates, participant guide |
