@@ -119,6 +119,7 @@
   </main>
 
 <script src="./trust-ring.bundle.js"></script>
+<script src="./cashu-paid-leg.bundle.js"></script>
 <script>
 (() => {
   const T = window.__trustRing;
@@ -134,6 +135,7 @@
   const state = window.__facilitator = {
     role: "member", memberIdx: 0, order: null, ring: [], proofSent: false,
     keyImage: null, chosenLabel: null, impersonating: false, status: null,
+    token: null, redeemedTotal: null, redeemStates: null, redeemError: null,
   };
 
   // Keys are derived, never stored: secretKey = sha256("mcp-cashu-pizza-demo/" + idx)
@@ -249,7 +251,42 @@
       prepareRing();
     }
     if (m.type === "PAID") { state.paid = true; }
+    if (m.type === "TOKEN") {
+      state.token = m.token;
+      state.redeemedTotal = null;
+      redeemToken(m.token);
+    }
   });
+
+  const MINT = new URLSearchParams(location.search).get("mint") || "https://cdk-a056e0f.cashu.exchange";
+
+  function mintLegLine(text) {
+    let el = document.getElementById("mint-leg");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "mint-leg";
+      el.className = "mono";
+      (document.querySelector("#order") || document.body).appendChild(el);
+    }
+    el.textContent = text;
+  }
+
+  /** PAID LEG (facilitator half): redeem the buyer's ecash at the mint, then release the order. */
+  async function redeemToken(token) {
+    try {
+      mintLegLine("redeeming the buyer's ecash…");
+      const res = await CashuPaidLeg.redeem(MINT, token);
+      // NUT-07 first: the point of the demo is that the buyer's proofs really are
+      // SPENT at the mint, so read that back before declaring the total.
+      state.redeemStates = (await CashuPaidLeg.checkStates(MINT, token)) || [];
+      state.redeemedTotal = res.total;
+      CH.postMessage({ type: "STATUS", state: "preparing" });
+      mintLegLine(`ecash redeemed: ${res.total} sat (original proofs: ${state.redeemStates.join(",")}) — order released to the kitchen`);
+    } catch (err) {
+      state.redeemError = err.message || String(err);
+      mintLegLine(`redeem failed: ${state.redeemError}`);
+    }
+  }
 
   $("#prove").addEventListener("click", sendProof);
   document.querySelectorAll("[data-status]").forEach((b) =>

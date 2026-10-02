@@ -232,6 +232,7 @@
   </main>
 
 <script src="./trust-ring.bundle.js"></script>
+<script src="./cashu-paid-leg.bundle.js"></script>
 <script>
 (() => {
   const T = window.__trustRing;
@@ -258,6 +259,7 @@
     checks: [], attacks: {}, anonymitySetSize: null, keyImage: null,
     realQuote: null, gateReason: null, mintState: null, invoiceNetwork: null,
     paymentConfirmed: false,
+    token: null, mintedTotal: 0, mintedProofs: 0, settleError: null,
   };
 
   const show = (name) => {
@@ -454,7 +456,10 @@
   // badge reads that mint's own quote state machine. The quote is requested
   // through withTrustGate, so the policy guards the MONEY path: no valid proof,
   // no quote, no invoice, nothing payable.
-  const MINT = "https://cdk-a056e0f.cashu.exchange";
+  // ?mint=<url> overrides for the demo: testnut auto-pays its own quotes, the signet
+  // zoo mint needs a real signet payment before the paid leg can run.
+  const MINT = new URLSearchParams(location.search).get("mint") || "https://cdk-a056e0f.cashu.exchange";
+  const MINT_IS_TEST = CashuPaidLeg.isTestMint(MINT);
   let gate = null;
   let pollTimer = null;
 
@@ -547,6 +552,7 @@
     if (fresh.state === "PAID" || fresh.state === "ISSUED") {
       state.paymentConfirmed = true;
       CH.postMessage({ type: "PAID", orderId: ORDER.orderId });
+      settleEcash();
       $("#track-head").textContent = `Order #${ORDER.orderId}`;
       $("#track-fac").textContent = state.facilitator;
       $("#track-anon").textContent = String(state.anonymitySetSize);
@@ -557,6 +563,32 @@
     return fresh;
   }
   function startPolling() { stopPolling(); pollTimer = setInterval(checkMint, 5000); }
+  function mintLegLine(text) {
+    let el = document.getElementById("mint-leg");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "mint-leg";
+      el.className = "mono";
+      const host = document.querySelector("#track") || document.body;
+      host.appendChild(el);
+    }
+    el.textContent = text;
+  }
+  /** PAID LEG (buyer half): mint the ecash for the paid quote, hand the token over. */
+  async function settleEcash() {
+    try {
+      mintLegLine("minting ecash…");
+      const minted = await CashuPaidLeg.mintEcash(MINT, ORDER.amount, state.realQuote.quote);
+      state.token = minted.token;
+      state.mintedTotal = minted.total;
+      state.mintedProofs = minted.proofCount;
+      CH.postMessage({ type: "TOKEN", orderId: ORDER.orderId, token: minted.token, total: minted.total });
+      mintLegLine(`${minted.total} sat ecash minted (${minted.proofCount} proofs) → handed to the facilitator`);
+    } catch (err) {
+      state.settleError = err.message || String(err);
+      mintLegLine(`minting failed: ${state.settleError}`);
+    }
+  }
   function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
 
   const STEPS = ["Paid", "Facilitator accepted", "Making your pizza", "Out for delivery", "Delivered · sats released"];
