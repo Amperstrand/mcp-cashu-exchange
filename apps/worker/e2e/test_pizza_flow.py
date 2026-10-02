@@ -92,6 +92,14 @@ def main():
 
     buyer_url = f"http://127.0.0.1:{PORT}/order.html"
     fac_url = f"http://127.0.0.1:{PORT}/facilitator.html"
+    # E2E_MINT=<url> points both pages at another mint. testnut auto-pays its own
+    # quotes, which is the only way to exercise the PAID LEG end to end without a
+    # funded wallet; the signet mint needs a real signet payment first.
+    e2e_mint = os.environ.get("E2E_MINT")
+    if e2e_mint:
+        buyer_url += f"?mint={e2e_mint}"
+        fac_url += f"?mint={e2e_mint}"
+        print(f"paid-leg mode: pages pinned to {e2e_mint}", flush=True)
 
     try:
         with sync_playwright() as p:
@@ -156,18 +164,23 @@ def main():
             check("a REAL invoice is issued by the mint",
                   bool(inv and inv.get("request")),
                   f"state={inv.get('state') if inv else None} network={net}")
-            check("invoice is a signet BOLT11 for the exact order amount",
-                  net == "signet" and inv is not None
-                  and str(inv.get("request", "")).startswith("lntbs")
-                  and str(inv.get("amount")) == "27900",
-                  f"{str(inv.get('request',''))[:22]}… amount={inv.get('amount') if inv else None}")
+            if e2e_mint:
+                check("invoice comes from the test mint for the exact order amount",
+                      inv is not None and str(inv.get("amount")) == "27900",
+                      f"{str(inv.get('request',''))[:22]}… amount={inv.get('amount') if inv else None}")
+            else:
+                check("invoice is a signet BOLT11 for the exact order amount",
+                      net == "signet" and inv is not None
+                      and str(inv.get("request", "")).startswith("lntbs")
+                      and str(inv.get("amount")) == "27900",
+                      f"{str(inv.get('request',''))[:22]}… amount={inv.get('amount') if inv else None}")
 
             # independent check: ask the mint ourselves, from the test process
             live = None
             try:
                 # Cloudflare-fronted mints 403 urllib's default UA — send a browser one
                 req = urllib.request.Request(
-                    f"{MINT}/v1/mint/quote/bolt11/{inv['quote']}",
+                    f"{e2e_mint or MINT}/v1/mint/quote/bolt11/{inv['quote']}",
                     headers={"User-Agent": "Mozilla/5.0"})
                 with urllib.request.urlopen(req, timeout=15) as r:
                     live = json.load(r)
@@ -186,9 +199,37 @@ def main():
                   "key image" in (second or "").lower() or "already used" in (second or "").lower(),
                   f"gate said: {second}")
 
-            check("order lifecycle does NOT advance while the mint reports UNPAID",
-                  buyer.evaluate("() => window.__buyer.paymentConfirmed") is False,
-                  f"mint state={live.get('state') if live else None}")
+            if e2e_mint:
+                # the test mint pays its own quotes, so the order must advance on its own
+                buyer.wait_for_function("() => window.__buyer.paymentConfirmed === true", timeout=90000)
+                check("the auto-paying test mint drove the order to PAID", True,
+                      "state=PAID (testnut)")
+
+                # ── PAID LEG: mint the ecash, hand it over, redeem it ────────────
+                buyer.wait_for_function(
+                    "() => window.__buyer.token !== null || window.__buyer.settleError !== null",
+                    timeout=90000)
+                minted = buyer.evaluate(
+                    "() => ({ total: window.__buyer.mintedTotal, proofs: window.__buyer.mintedProofs,"
+                    " err: window.__buyer.settleError })")
+                check("buyer MINTED the ecash (NUT-04) after the quote was PAID",
+                      minted["total"] > 0 and not minted["err"], f"{minted}")
+
+                fac.wait_for_function(
+                    "() => window.__facilitator.redeemStates !== null"
+                    " || window.__facilitator.redeemError !== null", timeout=90000)
+                redeemed = fac.evaluate(
+                    "() => ({ total: window.__facilitator.redeemedTotal,"
+                    " states: window.__facilitator.redeemStates, err: window.__facilitator.redeemError })")
+                check("facilitator REDEEMED the buyer's token at the mint",
+                      redeemed["total"] is not None and not redeemed["err"], f"{redeemed}")
+                check("the buyer's original proofs are SPENT at the mint",
+                      bool(redeemed["states"]) and all(s == "SPENT" for s in redeemed["states"]),
+                      f"proof states={redeemed['states']}")
+            else:
+                check("order lifecycle does NOT advance while the mint reports UNPAID",
+                      buyer.evaluate("() => window.__buyer.paymentConfirmed") is False,
+                      f"mint state={live.get('state') if live else None}")
 
             # ── negative: a ring containing an outside key ───────────────────
             buyer.goto(buyer_url)
