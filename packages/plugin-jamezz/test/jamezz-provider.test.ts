@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import { serviceId } from "@exchange/contracts";
+import { describe, expect, it } from "vitest";
 import { jamezzProvider } from "../src/index.js";
 
 const ORIGIN = "https://qrv5.jamezz.app";
