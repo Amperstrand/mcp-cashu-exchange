@@ -126,7 +126,8 @@ Everything merged goes public the moment the deploy token is set.
 - Day 1: extraction → **two leak-gated public repos**; card-free refactor;
   collaborator + card audit; architecture + live docs
 - Day 2: typed client, offline test suites, CLI, generic REST surface,
-  plugin-jamezz — and **the POS loop proven end to end**
+  plugin-jamezz — **the POS loop proven end to end** — and a 75-venue
+  catalog plus a second platform client (gastronovi) via the recon pipeline
   (live payments → real venue order → hosted checkout)
 - Platform drift found in the wild (jamezz-v2.0) → filed → fixed upstream
   same day, with tests

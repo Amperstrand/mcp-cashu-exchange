@@ -1,8 +1,8 @@
 # Evidence pack — every claim, and where to verify it
 
-Snapshot **2026-10-02T07:02Z**, extended post-demo (18:50Z):
+Snapshot **2026-10-02T07:02Z**, extended post-demo (18:50Z) and post-recon (2026-10-03):
 demo delivered (reel + live beats; POS footage verified frame-by-frame),
-catalog at 4 live-verified tables, trust-lane PR #10 reviewed and approved
+catalog at 75 live-verified tables (team chain-crawl rounds 1-3), a third public client (gastronovi — ALTCHA PoW solver, BRLO worked examples, CI green), and the platform-recon pipeline mapping new QR-ordering services end to end, trust-lane PR #10 reviewed and approved
 (CI pending a formatting fix), demo assets committed under `docs/assets/`.
 Re-verify any line with the command shown. The live worker still runs the
 pre-`33e5343` build (deploy token pending, issue #1) — see
