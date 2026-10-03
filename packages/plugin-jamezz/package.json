@@ -7,6 +7,6 @@
   "types": "src/index.ts",
   "dependencies": {
     "@exchange/contracts": "0.0.1",
-    "jamezz": "github:Amperstrand/jamezz#29f13b8"
+    "jamezz": "github:Amperstrand/jamezz#8e298af"
   }
 }

@@ -75,7 +75,7 @@ function exchangeDeps(env: Env): ExchangeDeps {
   const charging = withKvCache(berlinChargingProvider(), env.CACHE, 600, {
     keyPrefix: "charging:v1",
   });
-  const food = withKvCache(jamezzProvider(), env.CACHE, 600, {
+  const food = withKvCache(jamezzProvider(), env.CACHE, 3600, {
     keyPrefix: "jamezz:v1",
     keyFor: (query) => query.text ?? "all",
   });

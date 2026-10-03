@@ -10,6 +10,9 @@ import { JamezzClient, KNOWN_TABLES } from "jamezz";
 
 const PROVIDER_ID = providerId("jamezz");
 
+/** Parallel venue fetches per search — keeps cold searches fast at catalog scale. */
+const SEARCH_CONCURRENCY = 6;
+
 export interface JamezzProviderOptions {
   /** Inject a fake transport in tests; defaults to global fetch. */
   readonly fetchImpl?: typeof fetch;
@@ -94,16 +97,27 @@ export function jamezzProvider(
     displayName: "Jamezz table ordering (Burgermeister worked example)",
     async search(query: SearchQuery): Promise<readonly ServiceRecord[]> {
       const needle = query.text?.toLowerCase();
+      const wanted = KNOWN_TABLES.filter(
+        (table) =>
+          needle === undefined || table.name.toLowerCase().includes(needle),
+      );
       const records: ServiceRecord[] = [];
-      for (const table of KNOWN_TABLES) {
-        if (
-          needle !== undefined &&
-          !table.name.toLowerCase().includes(needle)
-        ) {
-          continue;
+      const cursor = { next: 0 };
+      const worker = async (): Promise<void> => {
+        for (;;) {
+          const index = cursor.next;
+          cursor.next += 1;
+          const table = wanted[index];
+          if (table === undefined) return;
+          records[index] = await snapshot(client, table);
         }
-        records.push(await snapshot(client, table));
-      }
+      };
+      await Promise.all(
+        Array.from(
+          { length: Math.min(SEARCH_CONCURRENCY, wanted.length) },
+          worker,
+        ),
+      );
       return records;
     },
     async details(id: ServiceId): Promise<ServiceDetails> {

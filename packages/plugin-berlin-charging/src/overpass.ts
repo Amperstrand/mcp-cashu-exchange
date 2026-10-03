@@ -58,6 +58,7 @@ async function queryEndpoint(
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
     body: `data=${encodeURIComponent(query)}`,
+    signal: AbortSignal.timeout(10_000),
   });
   if (!response.ok) {
     throw new OverpassUnavailableError(`${endpoint} → HTTP ${response.status}`);
