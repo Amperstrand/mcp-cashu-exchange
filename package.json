@@ -13,7 +13,7 @@
     "apps/*"
   ],
   "dependencies": {
-    "jamezz": "github:Amperstrand/jamezz#8e298af"
+    "jamezz": "github:Amperstrand/jamezz#ef234a6"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
