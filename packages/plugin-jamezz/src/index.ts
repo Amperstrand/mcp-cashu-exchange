@@ -55,7 +55,7 @@ async function snapshot(
       url: venue?.website,
       note:
         `QR table ${table.mid} · ${venue?.payProvider ?? "PSP"} hosted checkout · ` +
-        (        ("paymentEnabled" in table && table.paymentEnabled) === true
+        (("paymentEnabled" in table && table.paymentEnabled) === true
           ? "PAYMENT LIVE (bridge) · "
           : "menu-only · ") +
         (items.length > 0 ? items.join(" · ") : "menu unavailable right now"),
