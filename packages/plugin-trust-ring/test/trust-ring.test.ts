@@ -371,3 +371,21 @@ describe("verifyProofForMessage (the gateway seam, exchange#12)", () => {
     expect(verifyProof(proof, set, pin, createSeenSet()).ok).toBe(false);
   });
 });
+
+describe("minRingSize option (the 4-vs-16 convergence, exchange#12)", () => {
+  it("a 4-key ring passes the default and fails a tightened floor; the reason names the floor", async () => {
+    const { orderMessage, prove } = await import("../src/prove.ts");
+    const { verifyProofForMessage, DEFAULT_MIN_RING_SIZE } = await import("../src/verify.ts");
+    expect(DEFAULT_MIN_RING_SIZE).toBe(4);
+    const keys = Array.from({ length: 4 }, () => generateKeyPair());
+    const set = { setId: "floor-test", description: "synthetic", publishedAt: "2026-10-05T00:00:00Z", members: keys.map(k => ({ publicKey: k.publicKey })) } as never;
+    const pin = { setId: "floor-test", contentHash: trustSetContentHash(set) };
+    const order = { orderId: "f", amount: "1", currency: "EUR", clientId: "c", expiresAt: new Date(Date.now() + 3600_000).toISOString(), pin };
+    const proof = prove(set, keys[1]!, [0, 1, 2, 3], order);
+    const msg = orderMessage(order);
+    expect(verifyProofForMessage(msg, proof, set, pin, createSeenSet()).ok).toBe(true);
+    const tight = verifyProofForMessage(msg, proof, set, pin, createSeenSet(), { minRingSize: 16 });
+    expect(tight.ok).toBe(false);
+    expect((tight as { reason: string }).reason).toContain("below minimum 16");
+  });
+});

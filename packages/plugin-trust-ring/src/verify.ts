@@ -17,7 +17,11 @@ import { orderMessage } from "./prove.ts";
 import type { TrustSet, TrustSetPin } from "./trustset.ts";
 import { matchesPin, trustSetContentHash } from "./trustset.ts";
 
-export const MIN_RING_SIZE = 4;
+/** Default anonymity-set floor. Deployments may tighten (the Electrum
+ * side documents 16); 4 is this package's tested default. */
+export const DEFAULT_MIN_RING_SIZE = 4;
+/** @deprecated use the minRingSize option or DEFAULT_MIN_RING_SIZE */
+export const MIN_RING_SIZE = DEFAULT_MIN_RING_SIZE;
 
 export type VerifyResult =
   | { readonly ok: true; readonly anonymitySetSize: number }
@@ -90,13 +94,20 @@ export function verifyProof(
  * except message derivation is shared with verifyProof, so the two entry
  * points cannot drift.
  */
+export interface VerifyOptions {
+  /** anonymity-set floor; defaults to DEFAULT_MIN_RING_SIZE (4). */
+  readonly minRingSize?: number;
+}
+
 export function verifyProofForMessage(
   message: Uint8Array,
   proof: TrustProof,
   trustSet: TrustSet,
   pin: TrustSetPin,
   seen: KeyImageSeenSet,
+  options: VerifyOptions = {},
 ): VerifyResult {
+  const minRingSize = options.minRingSize ?? DEFAULT_MIN_RING_SIZE;
   // 6. The trust set must match the pin.
   if (!matchesPin(trustSet, pin)) {
     return {
@@ -117,10 +128,10 @@ export function verifyProofForMessage(
   }
 
   // 2. Ring size check.
-  if (proof.ring.length < MIN_RING_SIZE) {
+  if (proof.ring.length < minRingSize) {
     return {
       ok: false,
-      reason: `ring size ${proof.ring.length} is below minimum ${MIN_RING_SIZE}`,
+      reason: `ring size ${proof.ring.length} is below minimum ${minRingSize}`,
     };
   }
 
