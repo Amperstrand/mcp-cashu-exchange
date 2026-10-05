@@ -9,11 +9,11 @@
 > handover: versions `d1c2b6f2` → `3a353e7d` (attestation modes, OrderGate
 > race fix, 2026-10-05 snapshot refresh, /pos, map badges).
 >
-> **Footgun — resolve before the next deploy from THIS repo:** this worker's
-> `wrangler.jsonc` still claims `mcp.cashu.exchange` as a custom domain. A
-> `wrangler deploy` here would steal the domain back from the gateway.
-> Pick the exchange hub's new home (its own subdomain, e.g.
-> `hub.cashu.exchange`, or workers.dev), change the route, THEN deploy.
+> **Footgun DEFUSED (2026-10-05):** the route claim on `mcp.cashu.exchange`
+> is removed; the worker now defaults to its `workers.dev` subdomain, so a
+> deploy from this repo can no longer steal the gateway's domain. If a
+> custom home is wanted later (e.g. `hub.cashu.exchange`), add that route
+> and set `workers_dev: false` — one deliberate edit, no hazard.
 >
 > The sections below this notice describe the pre-handover exchange hub and
 > are kept as the reference for restoring/rehoming that surface.

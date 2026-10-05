@@ -10,6 +10,5 @@
   "kv_namespaces": [
     { "binding": "CACHE", "id": "e3bbb085f9eb4ecd9c854f53a8765924" }
   ],
-  "workers_dev": false,
-  "routes": [{ "pattern": "mcp.cashu.exchange", "custom_domain": true }]
+  "workers_dev": true
 }
