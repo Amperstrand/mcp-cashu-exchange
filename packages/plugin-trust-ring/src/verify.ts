@@ -76,6 +76,27 @@ export function verifyProof(
   pin: TrustSetPin,
   seen: KeyImageSeenSet,
 ): VerifyResult {
+  // 3. LSAG signature must be valid for the order-bound message.
+  const message = orderMessage(proof.order);
+  return verifyProofForMessage(message, proof, trustSet, pin, seen);
+}
+
+/**
+ * Same policy as verifyProof, but the caller supplies the signed message
+ * bytes. This is the upstream seam the DropShop gateway asked for
+ * (exchange#12, jamezz#7): proofs can bind to ANY canonical order object —
+ * e.g. the DROPSHOP-ORDER-INTENT/v1 encoding rebuilt from the verifier's
+ * own stored record — without re-implementing the policy. Everything
+ * except message derivation is shared with verifyProof, so the two entry
+ * points cannot drift.
+ */
+export function verifyProofForMessage(
+  message: Uint8Array,
+  proof: TrustProof,
+  trustSet: TrustSet,
+  pin: TrustSetPin,
+  seen: KeyImageSeenSet,
+): VerifyResult {
   // 6. The trust set must match the pin.
   if (!matchesPin(trustSet, pin)) {
     return {
@@ -133,8 +154,7 @@ export function verifyProof(
     };
   }
 
-  // 3. LSAG signature must be valid for the order-bound message.
-  const message = orderMessage(proof.order);
+  // 3. LSAG signature must be valid for the bound message.
   if (!lsagVerify(message, proof.ring, proof.signature)) {
     return {
       ok: false,

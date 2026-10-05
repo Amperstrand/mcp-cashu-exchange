@@ -346,3 +346,28 @@ describe("trust ring prove/verify", { timeout: 30000 }, () => {
     }
   });
 });
+
+describe("verifyProofForMessage (the gateway seam, exchange#12)", () => {
+  it("accepts a proof signed over ANY canonical message — e.g. a DROPSHOP-style intent hash — and agrees with verifyProof on the classic path", async () => {
+    const { orderMessage, prove } = await import("../src/prove.ts");
+    const { verifyProofForMessage, verifyProof } = await import("../src/verify.ts");
+    const keys = Array.from({ length: 4 }, () => generateKeyPair());
+    const set = { setId: "upstream-test", description: "synthetic", publishedAt: "2026-10-05T00:00:00Z", members: keys.map(k => ({ publicKey: k.publicKey })) } as never;
+    const pin = { setId: "upstream-test", contentHash: trustSetContentHash(set) };
+    const order = { orderId: "x", amount: "1", currency: "EUR", clientId: "c", expiresAt: new Date(Date.now() + 3600_000).toISOString(), pin };
+
+    // classic path: sign over orderMessage
+    const classic = prove(set, keys[1]!, [0, 1, 2, 3], order);
+    expect(verifyProof(classic, set, pin, createSeenSet()).ok).toBe(true);
+    expect(verifyProofForMessage(orderMessage(order), classic, set, pin, createSeenSet()).ok).toBe(true);
+
+    // gateway path: sign over an ARBITRARY canonical message (stand-in for orderIntentMessage)
+    const { sign } = await import("../src/lsag.ts");
+    const fakeIntentMessage = new Uint8Array(32).fill(7);
+    const sig = sign(fakeIntentMessage, keys.map(k => k.publicKey), 1, keys[1]!.secretKey);
+    const proof = { ...classic, signature: sig };
+    expect(verifyProofForMessage(fakeIntentMessage, proof, set, pin, createSeenSet()).ok).toBe(true);
+    // but the classic entry point rejects it (different message domain)
+    expect(verifyProof(proof, set, pin, createSeenSet()).ok).toBe(false);
+  });
+});

@@ -32,4 +32,4 @@ export {
 } from "./trustset.ts";
 export type { KeyImageSeenSet, VerifyResult } from "./verify.ts";
 // Verify
-export { createSeenSet, MIN_RING_SIZE, verifyProof } from "./verify.ts";
+export { createSeenSet, MIN_RING_SIZE, verifyProof, verifyProofForMessage } from "./verify.ts";
