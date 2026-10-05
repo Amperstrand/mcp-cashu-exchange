@@ -1,15 +1,22 @@
 # What is deployed today + handover
 
-Everything below was verified against the live worker on 2026-10-01 with
-real requests. Base URL: `https://mcp.cashu.exchange`.
-
-**Build status:** the live build predates the card-free payment rail (commit
-`33e5343`). Consequence: `payment.quote` returns `[]` on the live worker.
-Deploying HEAD needs `CLOUDFLARE_API_TOKEN` (issue #1) — until then, live
-behavior is exactly this document. Also waiting on that deploy:
-`jamezz.search` (food category, live menu preview), the generic
-`/api/search` REST surface, KV-cached search results, and cinema text
-matching that includes cinema names (not just film titles).
+> **⚠️ Domain handover executed 2026-10-05 (mcp-oda #10): `mcp.cashu.exchange`
+> and `api.cashu.exchange` now serve the DropShop agent-gateway**, not this
+> worker.** Verified live: `tools/list` on `mcp.cashu.exchange/mcp?token=demo`
+> returns the gateway's 19-tool set (`orders_*`, `orders_intent`, cinema
+> snapshot world, wallet, checkout), `/api/search?category=food` answers
+> 200, and `/api/health` is green. The gateway deploys that completed the
+> handover: versions `d1c2b6f2` → `3a353e7d` (attestation modes, OrderGate
+> race fix, 2026-10-05 snapshot refresh, /pos, map badges).
+>
+> **Footgun — resolve before the next deploy from THIS repo:** this worker's
+> `wrangler.jsonc` still claims `mcp.cashu.exchange` as a custom domain. A
+> `wrangler deploy` here would steal the domain back from the gateway.
+> Pick the exchange hub's new home (its own subdomain, e.g.
+> `hub.cashu.exchange`, or workers.dev), change the route, THEN deploy.
+>
+> The sections below this notice describe the pre-handover exchange hub and
+> are kept as the reference for restoring/rehoming that surface.
 
 ## Surfaces (all live)
 
