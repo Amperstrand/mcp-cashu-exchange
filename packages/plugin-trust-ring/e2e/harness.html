@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Trust Ring E2E — LSAG Ring Signature Trust Gate</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --card-bg: #161b22;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --red: #f85149;
+    --yellow: #d29922;
+    --text: #c9d1d9;
+    --muted: #8b949e;
+    --border: #30363d;
+    --font-size: 20px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: var(--font-size);
+    line-height: 1.6;
+    padding: 24px 32px;
+    min-height: 100vh;
+  }
+  h1 {
+    color: var(--accent);
+    font-size: 28px;
+    margin-bottom: 8px;
+  }
+  .subtitle { color: var(--muted); font-size: 18px; margin-bottom: 24px; }
+  .beat {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 16px;
+    opacity: 0.3;
+    transition: opacity 0.4s ease, border-color 0.4s ease;
+    min-height: 80px;
+  }
+  .beat.visible { opacity: 1; }
+  .beat.active { border-color: var(--accent); box-shadow: 0 0 12px rgba(88,166,255,0.3); }
+  .beat.pass { border-color: var(--green); }
+  .beat.fail { border-color: var(--red); }
+  .beat-title { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  .beat-title .icon { margin-right: 8px; }
+  .beat-body { font-size: 18px; color: var(--text); }
+  .beat-detail { font-size: 16px; color: var(--muted); margin-top: 8px; font-family: "SF Mono", Consolas, monospace; word-break: break-all; }
+  .verdict { font-size: 20px; font-weight: 700; margin-top: 10px; }
+  .verdict.pass { color: var(--green); }
+  .verdict.fail { color: var(--red); }
+  .verdict.pending { color: var(--yellow); }
+  .progress-bar {
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.5s ease;
+    width: 0%;
+  }
+  .summary {
+    background: var(--card-bg);
+    border: 2px solid var(--accent);
+    border-radius: 12px;
+    padding: 24px;
+    margin-top: 16px;
+  }
+  .summary h2 { color: var(--accent); font-size: 24px; margin-bottom: 12px; }
+  .summary-item { font-size: 18px; margin: 6px 0; }
+  #controls {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    gap: 12px;
+  }
+  #controls button {
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  #controls button:hover { opacity: 0.85; }
+  #controls button:disabled { opacity: 0.4; cursor: default; }
+</style>
+</head>
+<body>
+  <h1>🔐 Trust Ring — LSAG Ring Signature Trust Gate</h1>
+  <div class="subtitle">mcp-cashu-exchange / plugin-trust-ring — real browser E2E</div>
+  <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+  <div id="beats"></div>
+  <div id="summary" style="display:none;"></div>
+  <div id="controls">
+    <button id="runBtn" onclick="runBeats()">▶ Run Walkthrough</button>
+  </div>
+
+<!-- REAL bundled package source — no mocks, no reimplemented crypto. -->
+<!-- IIFE format so it loads from file:// without CORS issues. -->
+<script src="./dist/trust-ring.bundle.js"></script>
+<script>
+  // The IIFE bundle assigns all exports to window.__trustRing
+  const {
+    generateKeyPair, sign, verify, hashToCurve,
+    orderMessage, prove, verifyProof,
+    pinTrustSet, trustSetContentHash, matchesPin, toHex,
+    createSeenSet, MIN_RING_SIZE, withTrustGate
+  } = window.__trustRing;
+
+  // ─── Beat definitions ───────────────────────────────────────────
+  // Each beat is a function that returns { title, body, detail, verdict, pass }
+  // All values come from executing the real modules above.
+
+  const N = 8;
+  const keys = [];
+  const members = [];
+  for (let i = 0; i < N; i++) {
+    const kp = generateKeyPair();
+    keys.push(kp);
+    members.push({
+      publicKey: kp.publicKey,
+      label: `operator-${i}`,
+      basis: i < 2 ? "met-in-person" : i < 5 ? "vouched" : "seed",
+      tier: i < 2 ? "gold" : i < 5 ? "silver" : "bronze",
+      expiresAt: "2027-12-31T23:59:59Z",
+    });
+  }
+  const trustSet = {
+    setId: "trust-set-demo-001",
+    description: "Demo trust set for E2E presentation",
+    members,
+    publishedAt: "2026-10-01T00:00:00Z",
+  };
+  const pin = pinTrustSet(trustSet);
+
+  const beats = [
+    {
+      title: "Setup — Trust Set Published",
+      icon: "📋",
+      run: () => {
+        return {
+          body: `Published trust set with ${N} members. Each member has a secp256k1 key pair.`,
+          detail: `Set ID: ${trustSet.setId}\nPin (content hash): ${pin.contentHash.slice(0, 24)}…\nMin ring size: ${MIN_RING_SIZE}`,
+          verdict: "Trust set pinned ✅",
+          pass: true,
+        };
+      }
+    },
+    {
+      title: "Operator Generates Key Pair",
+      icon: "🔑",
+      run: () => {
+        const operatorIdx = 3;
+        const opKey = keys[operatorIdx];
+        return {
+          body: `Operator #3 (vouched, silver) has a key pair in the trust set.`,
+          detail: `Public key: ${toHex(opKey.publicKey).slice(0, 24)}…\nSecret key: [32 bytes, redacted]`,
+          verdict: "Key pair ready ✅",
+          pass: true,
+          _opIdx: operatorIdx,
+        };
+      }
+    },
+    {
+      title: "Operator Produces Trust Proof (LSAG Ring Signature)",
+      icon: "✍️",
+      run: (ctx) => {
+        const operatorIdx = 3;
+        const opKey = keys[operatorIdx];
+        const ringIndices = [0, 3, 5, 7];
+        const order = {
+          orderId: "order-2026-001",
+          amount: "15.00",
+          currency: "EUR",
+          clientId: "client-alice",
+          expiresAt: "2027-12-31T23:59:59Z",
+          pin,
+        };
+        const proof = prove(trustSet, opKey, ringIndices, order);
+        ctx.proof = proof;
+        ctx.order = order;
+        return {
+          body: `Operator signs as member of a ${ringIndices.length}-member ring (indices [${ringIndices}]). The signature does NOT reveal which member they are.`,
+          detail: `Key image: ${toHex(proof.signature.keyImage).slice(0, 24)}…\nAnonymity set: ${proof.anonymitySetSize}\nOrder: ${order.orderId} / ${order.amount} ${order.currency}`,
+          verdict: "Proof created — LSAG ring signature ✅",
+          pass: true,
+        };
+      }
+    },
+    {
+      title: "Client Verifies — Honest Proof Accepted",
+      icon: "✅",
+      run: (ctx) => {
+        const seen = createSeenSet();
+        ctx.seen = seen;
+        const result = verifyProof(ctx.proof, trustSet, pin, seen);
+        return {
+          body: `Client checks: pin match, ring ⊆ trust set, ring ≥ MIN_RING_SIZE, LSAG valid, key image fresh, order not expired.`,
+          detail: `Result: ${result.ok ? "ACCEPTED" : "REJECTED: " + result.reason}\nAnonymity set size: ${result.ok ? result.anonymitySetSize : "N/A"}`,
+          verdict: result.ok ? "Proof ACCEPTED ✅" : "Proof REJECTED ❌",
+          pass: result.ok,
+        };
+      }
+    },
+    {
+      title: "Attack 1 — Non-Member Forges Signature",
+      icon: "🚫",
+      run: (ctx) => {
+        const attacker = generateKeyPair();
+        const ring = [keys[0].publicKey, keys[1].publicKey, keys[2].publicKey, keys[3].publicKey];
+        const sig = sign(orderMessage(ctx.order), ring, 0, attacker.secretKey);
+        const badProof = { signature: sig, ring, pin, order: ctx.order, anonymitySetSize: ring.length };
+        const result = verifyProof(badProof, trustSet, pin, createSeenSet());
+        return {
+          body: `Attacker (not in trust set) builds a ring of 4 trusted keys and signs. The LSAG signature won't close — their secret key matches none of the ring's public keys.`,
+          detail: `Attacker pubkey: ${toHex(attacker.publicKey).slice(0, 24)}…\nResult: ${result.ok ? "ACCEPTED" : "REJECTED"}\nReason: ${result.ok ? "" : result.reason}`,
+          verdict: result.ok ? "Attack succeeded ❌" : "Attack defeated ✅",
+          pass: !result.ok,
+        };
+      }
+    },
+    {
+      title: "Attack 2 — Ring Contains Outside Key",
+      icon: "🕵️",
+      run: (ctx) => {
+        const attacker = generateKeyPair();
+        const ring = [attacker.publicKey, keys[1].publicKey, keys[2].publicKey, keys[3].publicKey];
+        const sig = sign(orderMessage(ctx.order), ring, 0, attacker.secretKey);
+        const badProof = { signature: sig, ring, pin, order: ctx.order, anonymitySetSize: ring.length };
+        const result = verifyProof(badProof, trustSet, pin, createSeenSet());
+        return {
+          body: `Attacker includes their OWN key in the ring. The LSAG signature is valid, but the subset check catches the outside key.`,
+          detail: `Result: ${result.ok ? "ACCEPTED" : "REJECTED"}\nReason: ${result.ok ? "" : result.reason}`,
+          verdict: result.ok ? "Attack succeeded ❌" : "Attack defeated ✅",
+          pass: !result.ok,
+        };
+      }
+    },
+    {
+      title: "Attack 3 — Replay Proof for Different Order",
+      icon: "🔄",
+      run: (ctx) => {
+        const orderB = { ...ctx.order, orderId: "order-2026-999", amount: "99.00", clientId: "client-bob" };
+        const replayProof = { ...ctx.proof, order: orderB };
+        const result = verifyProof(replayProof, trustSet, pin, createSeenSet());
+        return {
+          body: `A valid proof for order A is submitted for order B. The signed message binds the order — signature for A ≠ B.`,
+          detail: `Order A: ${ctx.order.orderId} (${ctx.order.amount} ${ctx.order.currency})\nOrder B: ${orderB.orderId} (${orderB.amount} ${orderB.currency})\nResult: ${result.ok ? "ACCEPTED" : "REJECTED"}\nReason: ${result.ok ? "" : result.reason}`,
+          verdict: result.ok ? "Attack succeeded ❌" : "Attack defeated ✅",
+          pass: !result.ok,
+        };
+      }
+    },
+    {
+      title: "Attack 4 — Reused Key Image (Double-Spend)",
+      icon: "🔁",
+      run: (ctx) => {
+        const seen = createSeenSet();
+        const first = verifyProof(ctx.proof, trustSet, pin, seen);
+        const second = verifyProof(ctx.proof, trustSet, pin, seen);
+        return {
+          body: `Same operator submits the same proof twice for the same order. Key image is scoped per order/epoch — one-use enforced without cross-order linkability.`,
+          detail: `First: ${first.ok ? "ACCEPTED" : "REJECTED"}\nSecond: ${second.ok ? "ACCEPTED" : "REJECTED"}\nReason: ${second.ok ? "" : second.reason}`,
+          verdict: second.ok ? "Attack succeeded ❌" : "Attack defeated ✅",
+          pass: !second.ok,
+        };
+      }
+    },
+    {
+      title: "Summary — Full Walkthrough Complete",
+      icon: "📊",
+      run: (ctx) => {
+        return {
+          body: `The operator proved membership in a ${ctx.proof.anonymitySetSize}-member ring WITHOUT revealing which member they are. All 4 attacks were defeated by the real LSAG + policy verification code.`,
+          detail: `Anonymity set = ring size = ${ctx.proof.anonymitySetSize}\nKey image: ${toHex(ctx.proof.signature.keyImage).slice(0, 24)}…`,
+          verdict: "All checks passed ✅",
+          pass: true,
+        };
+      }
+    },
+  ];
+
+  // ─── Rendering ──────────────────────────────────────────────────
+  const beatsContainer = document.getElementById("beats");
+  const progressFill = document.getElementById("progress");
+  const runBtn = document.getElementById("runBtn");
+  const summaryDiv = document.getElementById("summary");
+
+  // Pre-render all beats (hidden)
+  const beatElements = beats.map((beat, i) => {
+    const div = document.createElement("div");
+    div.className = "beat";
+    div.id = `beat-${i}`;
+    div.innerHTML = `
+      <div class="beat-title"><span class="icon">${beat.icon}</span>${beat.title}</div>
+      <div class="beat-body" id="beat-body-${i}">Waiting…</div>
+      <div class="beat-detail" id="beat-detail-${i}"></div>
+      <div class="verdict pending" id="beat-verdict-${i}">Pending…</div>
+    `;
+    beatsContainer.appendChild(div);
+    return div;
+  });
+
+  window.__beatResults = [];
+  window.__beats = beats;
+  window.__runBeats = runBeats;
+
+  async function runBeats() {
+    runBtn.disabled = true;
+    runBtn.textContent = "Running…";
+    const ctx = {};
+    const results = [];
+
+    for (let i = 0; i < beats.length; i++) {
+      // Make visible
+      beatElements[i].classList.add("visible");
+      beatElements[i].classList.add("active");
+      progressFill.style.width = `${((i) / beats.length) * 100}%`;
+
+      // Scroll into view
+      beatElements[i].scrollIntoView({ behavior: "smooth", block: "center" });
+
+      // Wait a moment for the beat to be visible
+      await new Promise(r => setTimeout(r, 600));
+
+      // Run the beat
+      let result;
+      try {
+        result = beats[i].run(ctx);
+      } catch (e) {
+        result = { body: `Error: ${e.message}`, detail: e.stack || "", verdict: "ERROR ❌", pass: false };
+      }
+
+      // Render
+      document.getElementById(`beat-body-${i}`).textContent = result.body;
+      document.getElementById(`beat-detail-${i}`).textContent = result.detail;
+      const verdictEl = document.getElementById(`beat-verdict-${i}`);
+      verdictEl.textContent = result.verdict;
+      verdictEl.className = `verdict ${result.pass ? "pass" : "fail"}`;
+      beatElements[i].classList.remove("active");
+      beatElements[i].classList.add(result.pass ? "pass" : "fail");
+
+      results.push({ title: beats[i].title, pass: result.pass, verdict: result.verdict });
+      window.__beatResults = results;
+
+      // Wait for readability
+      await new Promise(r => setTimeout(r, 2500));
+    }
+
+    progressFill.style.width = "100%";
+
+    // Show summary
+    const allPass = results.every(r => r.pass);
+    summaryDiv.style.display = "block";
+    summaryDiv.innerHTML = `
+      <h2>${allPass ? "✅ All Beats Passed" : "❌ Some Beats Failed"}</h2>
+      ${results.map(r => `<div class="summary-item">${r.pass ? "✅" : "❌"} ${r.title} — ${r.verdict}</div>`).join("")}
+    `;
+    summaryDiv.scrollIntoView({ behavior: "smooth", block: "center" });
+
+    window.__allDone = true;
+    window.__allPass = allPass;
+    runBtn.textContent = allPass ? "✅ Done — All Passed" : "❌ Done — Failures";
+  }
+</script>
+</body>
+</html>

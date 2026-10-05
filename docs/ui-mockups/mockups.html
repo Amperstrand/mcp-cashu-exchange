@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mcp.cashu.exchange — pizza order flow (mockups)</title>
+<style>
+  :root {
+    --bg:#0f1115; --panel:#171a21; --panel2:#1d212a; --border:#2a2f3a;
+    --text:#e6e9ef; --muted:#9aa3b2; --accent:#f7931a; --ok:#34d399;
+    --err:#f87171; --warn:#fbbf24;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:#08090c; color:var(--text);
+    font-family:system-ui,-apple-system,sans-serif; }
+  #grid { display:flex; flex-wrap:wrap; gap:28px; padding:28px; justify-content:center; }
+  .screen { display:none; flex-direction:column; align-items:center; gap:10px; }
+  .screen.active { display:flex; }
+  body.one { background:var(--bg); }
+  body.one #grid { padding:0; gap:0; }
+  body.one .caption { display:none; }
+
+  .phone { width:420px; height:880px; background:var(--bg);
+    border:1px solid var(--border); border-radius:22px; overflow:hidden;
+    display:flex; flex-direction:column; position:relative; }
+  body.one .phone { border:0; border-radius:0; }
+  .caption { font-size:12px; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--muted); }
+  .tag { position:absolute; top:12px; right:12px; z-index:5; font-size:10px;
+    letter-spacing:.08em; text-transform:uppercase; padding:3px 8px;
+    border-radius:999px; font-weight:700; }
+  .tag.new { background:var(--accent); color:#111; }
+  .tag.old { background:transparent; color:var(--muted); border:1px solid var(--border); }
+
+  .bar { display:flex; justify-content:space-between; padding:8px 16px 0;
+    font-size:11px; color:var(--muted); }
+  .appbar { display:flex; align-items:center; gap:10px; padding:12px 16px;
+    border-bottom:1px solid var(--border); }
+  .appbar h1 { font-size:15px; margin:0; }
+  .appbar h1 b { color:var(--accent); }
+  .appbar .wallet { margin-left:auto; font-size:12px; color:var(--accent);
+    border:1px solid var(--accent); border-radius:999px; padding:3px 9px; }
+  main { flex:1; overflow:hidden; padding:14px 16px; display:flex;
+    flex-direction:column; gap:12px; }
+  h2 { font-size:17px; margin:0; }
+  h3 { font-size:13px; margin:0; color:var(--muted); font-weight:600;
+    text-transform:uppercase; letter-spacing:.06em; }
+  p { margin:0; font-size:13px; line-height:1.45; color:var(--muted); }
+  .card { background:var(--panel); border:1px solid var(--border);
+    border-radius:12px; padding:12px; }
+  .card.tight { padding:10px 12px; }
+  .row { display:flex; align-items:center; gap:10px; }
+  .row .grow { flex:1; min-width:0; }
+  .title { font-size:14px; font-weight:600; color:var(--text); }
+  .sub { font-size:11.5px; color:var(--muted); }
+  .sats { color:var(--accent); font-weight:700; font-variant-numeric:tabular-nums; }
+  .pill { font-size:10.5px; padding:2px 8px; border-radius:999px;
+    border:1px solid var(--border); color:var(--muted); white-space:nowrap; }
+  .pill.ok { color:var(--ok); border-color:color-mix(in srgb,var(--ok) 45%,transparent); }
+  .pill.no { color:var(--err); border-color:color-mix(in srgb,var(--err) 45%,transparent); }
+  .pill.ac { color:var(--accent); border-color:color-mix(in srgb,var(--accent) 45%,transparent); }
+  .thumb { width:46px; height:46px; border-radius:10px; flex:none;
+    background:linear-gradient(135deg,#3a2a12,#7a4a12); display:grid;
+    place-items:center; font-size:22px; }
+  button { font:inherit; border:0; border-radius:10px; padding:11px 14px;
+    background:var(--accent); color:#111; font-weight:700; cursor:pointer; }
+  button.ghost { background:transparent; color:var(--text);
+    border:1px solid var(--border); font-weight:600; }
+  button.wide { width:100%; }
+  button:disabled { opacity:.45; }
+  .cta { margin-top:auto; }
+  .checks { list-style:none; margin:0; padding:0; display:flex;
+    flex-direction:column; gap:7px; }
+  .checks li { display:flex; gap:8px; font-size:12.5px; align-items:flex-start; }
+  .checks .mk { color:var(--ok); flex:none; font-weight:700; }
+  .checks .mk.no { color:var(--err); }
+  .mono { font-family:ui-monospace,SFMono-Regular,monospace; font-size:11px;
+    color:var(--muted); word-break:break-all; }
+  .kv { display:flex; justify-content:space-between; gap:12px; font-size:12.5px;
+    padding:4px 0; }
+  .kv + .kv { border-top:1px dashed var(--border); }
+  .kv span:first-child { color:var(--muted); }
+  .banner { border-radius:12px; padding:12px; font-size:13px; }
+  .banner.ok { background:color-mix(in srgb,var(--ok) 14%,var(--panel));
+    border:1px solid color-mix(in srgb,var(--ok) 45%,transparent); color:var(--ok);
+    font-weight:700; }
+  .banner.err { background:color-mix(in srgb,var(--err) 13%,var(--panel));
+    border:1px solid color-mix(in srgb,var(--err) 45%,transparent); }
+  .big { font-size:26px; font-weight:800; letter-spacing:-.01em; }
+  .center { text-align:center; }
+  .timeline { display:flex; flex-direction:column; gap:0; }
+  .step { display:flex; gap:12px; font-size:12.5px; }
+  .step .dot { width:10px; height:10px; border-radius:50%; margin-top:5px;
+    flex:none; background:var(--border); }
+  .step.done .dot { background:var(--ok); }
+  .step.now .dot { background:var(--accent); box-shadow:0 0 0 4px
+    color-mix(in srgb,var(--accent) 22%,transparent); }
+  .step .line { width:1px; background:var(--border); flex:1; margin:4px auto; }
+  .step .rail { display:flex; flex-direction:column; align-items:center; width:12px; }
+  .step:last-child .rail .line { display:none; }
+  .step .body { padding-bottom:14px; flex:1; }
+  .step.done .body b, .step.now .body b { color:var(--text); }
+  .step .body b { font-weight:600; color:var(--muted); }
+  .qr { width:150px; height:150px; background:#fff; border-radius:10px;
+    padding:8px; margin:0 auto; }
+  .qr canvas { width:100%; height:100%; image-rendering:pixelated; display:block; }
+  .addr { background:var(--bg); border:1px solid var(--border); border-radius:9px;
+    padding:9px 10px; font-family:ui-monospace,monospace; font-size:11px;
+    color:var(--accent); word-break:break-all; }
+  .nav { display:flex; border-top:1px solid var(--border); background:var(--panel); }
+  .nav div { flex:1; text-align:center; font-size:10.5px; color:var(--muted);
+    padding:9px 0 11px; }
+  .nav div.on { color:var(--accent); }
+  .ring { display:flex; gap:6px; flex-wrap:wrap; }
+  .ring i { width:34px; height:34px; border-radius:9px; background:var(--panel2);
+    border:1px solid var(--border); display:grid; place-items:center;
+    font-size:11px; font-style:normal; color:var(--muted); }
+  .ring i.you { border-color:var(--accent); color:var(--accent); font-weight:700; }
+  .note { font-size:11px; color:var(--muted); font-style:italic; }
+  .spacer { height:2px; }
+</style>
+</head>
+<body>
+<div id="grid">
+
+<!-- ───────────────────────── 1 · DISCOVER ───────────────────────── -->
+<section class="screen" data-n="1">
+  <div class="tag old">partly exists (chat)</div>
+  <div class="phone">
+    <div class="bar"><span>14:07</span><span>Berlin · 5G</span></div>
+    <div class="appbar">
+      <h1><b>mcp</b>.cashu.exchange <span class="sub">/pizza</span></h1>
+      <span class="wallet">21,400 sats</span>
+    </div>
+    <main>
+      <h2>Pizza in Berlin</h2>
+      <p>Delivered by facilitators you choose — and can verify.</p>
+      <div class="card tight row">
+        <div class="thumb">🍕</div>
+        <div class="grow">
+          <div class="title">Pizzeria Napoli</div>
+          <div class="sub">Kreuzberg · ★ 4.8 · 25–35 min</div>
+        </div>
+        <div style="text-align:right">
+          <div class="pill ok">4 vetted</div>
+          <div class="sub" style="margin-top:4px">from 10,900</div>
+        </div>
+      </div>
+      <div class="card tight row">
+        <div class="thumb">🍕</div>
+        <div class="grow">
+          <div class="title">Trattoria Sole</div>
+          <div class="sub">Mitte · ★ 4.6 · 30–40 min</div>
+        </div>
+        <div style="text-align:right">
+          <div class="pill ok">3 vetted</div>
+          <div class="sub" style="margin-top:4px">from 11,500</div>
+        </div>
+      </div>
+      <div class="card tight row">
+        <div class="thumb">🍕</div>
+        <div class="grow">
+          <div class="title">Oggi Pizza</div>
+          <div class="sub">Neukölln · ★ 4.4 · 35–50 min</div>
+        </div>
+        <div style="text-align:right">
+          <div class="pill no">no match</div>
+          <div class="sub" style="margin-top:4px">from 9,900</div>
+        </div>
+      </div>
+      <p class="note">“4 vetted” = four facilitators in this pizzeria can prove
+        membership in your trust set. You pick one at checkout.</p>
+    </main>
+    <div class="nav"><div class="on">Pizza</div><div>Cinema</div><div>Charging</div><div>Set</div></div>
+  </div>
+  <div class="caption">1 · Discover — needs building</div>
+</section>
+
+<!-- ───────────────────────── 2 · MENU + BASKET ───────────────────────── -->
+<section class="screen" data-n="2">
+  <div class="tag old">partly exists (chat)</div>
+  <div class="phone">
+    <div class="bar"><span>14:08</span><span>Berlin · 5G</span></div>
+    <div class="appbar">
+      <h1>Pizzeria Napoli</h1>
+      <span class="wallet">21,400 sats</span>
+    </div>
+    <main>
+      <h3>Menu</h3>
+      <div class="card tight row">
+        <div class="grow"><div class="title">Margherita</div>
+          <div class="sub">San Marzano, fior di latte, basil</div></div>
+        <div style="text-align:right"><div class="sats">12,500</div>
+          <div class="pill ac">1 in basket</div></div>
+      </div>
+      <div class="card tight row">
+        <div class="grow"><div class="title">Quattro Formaggi</div>
+          <div class="sub">Gorgonzola, taleggio, pecorino, mozzarella</div></div>
+        <div style="text-align:right"><div class="sats">15,400</div>
+          <div class="pill ac">1 in basket</div></div>
+      </div>
+      <div class="card tight row">
+        <div class="grow"><div class="title">Diavola</div>
+          <div class="sub">Spianata piccante, chilli honey</div></div>
+        <div style="text-align:right"><div class="sats">14,900</div>
+          <div class="pill">add</div></div>
+      </div>
+      <div class="card tight">
+        <div class="kv"><span>Basket · 2 pizzas</span><span class="sats">27,900 sats</span></div>
+        <div class="kv"><span>≈ fiat</span><span>26,10 €</span></div>
+        <div class="kv"><span>Delivery</span><span>Kreuzberg · 10999</span></div>
+      </div>
+      <div class="cta"><button class="wide">Checkout · 27,900 sats</button></div>
+    </main>
+    <div class="nav"><div class="on">Pizza</div><div>Cinema</div><div>Charging</div><div>Set</div></div>
+  </div>
+  <div class="caption">2 · Menu + basket — needs building</div>
+</section>
+
+<!-- ───────────────────────── 3 · WHO FULFILS ───────────────────────── -->
+<section class="screen" data-n="3">
+  <div class="tag new">NEW UI</div>
+  <div class="phone">
+    <div class="bar"><span>14:09</span><span>Berlin · 5G</span></div>
+    <div class="appbar"><h1>Who fulfils it?</h1></div>
+    <main>
+      <p>Napoli makes the pizza. A <b style="color:var(--text)">facilitator</b>
+        carries it and settles the sats. You only pay a facilitator who can prove
+        they are in your trust set.</p>
+      <div class="card tight row">
+        <div class="grow">
+          <div class="title">Food Runners Berlin</div>
+          <div class="sub">312 deliveries · ★ 4.9 · 25 min</div>
+          <div style="margin-top:6px"><span class="pill ok">✓ in your trust set</span></div>
+        </div>
+      </div>
+      <div class="card tight row">
+        <div class="grow">
+          <div class="title">Kreuzberg Couriers</div>
+          <div class="sub">88 deliveries · ★ 4.7 · 30 min</div>
+          <div style="margin-top:6px"><span class="pill ok">✓ in your trust set</span></div>
+        </div>
+      </div>
+      <div class="card tight row" style="opacity:.75">
+        <div class="grow">
+          <div class="title">Anon Delivery</div>
+          <div class="sub">new · no history</div>
+          <div style="margin-top:6px"><span class="pill no">not in your set — payment blocked</span></div>
+        </div>
+      </div>
+      <p class="note">The list is yours: 8 facilitators, pinned 28 Sep 2026.</p>
+      <div class="cta"><button class="wide">Continue with Food Runners Berlin</button></div>
+    </main>
+    <div class="nav"><div class="on">Pizza</div><div>Cinema</div><div>Charging</div><div>Set</div></div>
+  </div>
+  <div class="caption">3 · Choose the facilitator — NEW UI</div>
+</section>
+
+<!-- ───────────────────────── 4 · VETTING (the key screen) ───────────── -->
+<section class="screen" data-n="4">
+  <div class="tag new">NEW UI · the point</div>
+  <div class="phone">
+    <div class="bar"><span>14:10</span><span>Berlin · 5G</span></div>
+    <div class="appbar"><h1>Verifying the facilitator</h1></div>
+    <main>
+      <div class="banner ok center">VERIFIED — a member of your trust set<br>
+        <span style="font-weight:600;font-size:12px;color:var(--text)">signed this
+        order. We did not learn <i>which</i> one.</span></div>
+
+      <div class="card tight">
+        <h3>Your pinned trust set</h3>
+        <div class="kv"><span>List</span><span>pizza-facilitators-berlin</span></div>
+        <div class="kv"><span>Members</span><span>8 · pinned by you</span></div>
+        <div class="kv"><span>Published</span><span>28 Sep 2026, 11:20</span></div>
+        <div class="kv"><span>Version hash</span><span class="mono">3f9a…c41d</span></div>
+      </div>
+
+      <div class="card tight">
+        <h3>What was checked</h3>
+        <ul class="checks">
+          <li><span class="mk">✓</span><span>Set matches your pinned version hash</span></li>
+          <li><span class="mk">✓</span><span>Ring is a subset of your pinned set (4 of 8)</span></li>
+          <li><span class="mk">✓</span><span>Ring size 4 ≥ minimum 3</span></li>
+          <li><span class="mk">✓</span><span>Proof binds <b style="color:var(--text)">this</b> order — #PZ-4471 · 27,900 sats</span></li>
+          <li><span class="mk">✓</span><span>Expiry 15:32 — valid for this delivery window</span></li>
+          <li><span class="mk">✓</span><span>Key image fresh — not used for this order before</span></li>
+        </ul>
+      </div>
+
+      <div class="card tight">
+        <h3>Anonymity</h3>
+        <div class="ring">
+          <i class="you">?</i><i>?</i><i>?</i><i>?</i>
+        </div>
+        <p style="margin-top:8px">Anonymity set = <b style="color:var(--text)">4</b>.
+          The ring proves one of these four signed; the signature does not say which.
+          Key image <span class="mono">8c41…7ad9</span> is one-use per order, so the
+          same proof cannot be replayed.</p>
+      </div>
+      <div class="cta"><button class="wide">Continue to bitcoin payment</button></div>
+    </main>
+  </div>
+  <div class="caption">4 · Facilitator vetting — NEW UI (the demo’s core beat)</div>
+</section>
+
+<!-- ───────────────────────── 5 · PAY BITCOIN ───────────────────────── -->
+<section class="screen" data-n="5">
+  <div class="tag new">NEW UI</div>
+  <div class="phone">
+    <div class="bar"><span>14:11</span><span>Berlin · 5G</span></div>
+    <div class="appbar"><h1>Pay with bitcoin</h1><span class="wallet">27,900 sats</span></div>
+    <main>
+      <div class="card tight center">
+        <div class="big sats">27,900 sats</div>
+        <div class="sub">≈ 26,10 € · order #PZ-4471</div>
+      </div>
+      <div class="qr"><canvas id="qr" width="21" height="21"></canvas></div>
+      <p class="center">Lightning invoice · expires in 14:22</p>
+      <div class="addr">lnbc279u1p3xq7ppsp5…q9m2c4f7ad9</div>
+      <div class="row" style="gap:8px">
+        <button class="ghost grow" style="flex:1">Copy</button>
+        <button style="flex:1">Open wallet</button>
+      </div>
+      <div class="card tight">
+        <h3>Other ways to pay</h3>
+        <div class="kv"><span>Cashu ecash (works today)</span><span>paste token</span></div>
+        <div class="kv"><span>Prepaid card · 2fiat rail</span><span class="sub">soon</span></div>
+      </div>
+      <p class="note">The seller never takes custody of your sats: the invoice is
+        paid straight to the facilitator’s node once the order is accepted.</p>
+      <div class="cta"><button class="wide" disabled>Waiting for payment…</button></div>
+    </main>
+  </div>
+  <div class="caption">5 · Bitcoin payment — NEW UI</div>
+</section>
+
+<!-- ───────────────────────── 6 · TRACKING ───────────────────────── -->
+<section class="screen" data-n="6">
+  <div class="tag old">missing today</div>
+  <div class="phone">
+    <div class="bar"><span>14:24</span><span>Berlin · 5G</span></div>
+    <div class="appbar"><h1>Order #PZ-4471</h1><span class="wallet">paid</span></div>
+    <main>
+      <div class="card tight">
+        <div class="timeline">
+          <div class="step done"><div class="rail"><div class="dot"></div><div class="line"></div></div>
+            <div class="body"><b>Paid · 27,900 sats</b><div class="sub">14:11 · Lightning</div></div></div>
+          <div class="step done"><div class="rail"><div class="dot"></div><div class="line"></div></div>
+            <div class="body"><b>Facilitator accepted</b><div class="sub">Food Runners Berlin · proof verified 14:11</div></div></div>
+          <div class="step now"><div class="rail"><div class="dot"></div><div class="line"></div></div>
+            <div class="body"><b>Making your pizza</b><div class="sub">Napoli · ready ~14:38</div></div></div>
+          <div class="step"><div class="rail"><div class="dot"></div><div class="line"></div></div>
+            <div class="body"><b>Out for delivery</b><div class="sub">ETA 15:05</div></div></div>
+          <div class="step"><div class="rail"><div class="dot"></div></div>
+            <div class="body"><b>Delivered · sats released</b><div class="sub">funds move when you confirm</div></div></div>
+        </div>
+      </div>
+      <div class="card tight">
+        <div class="kv"><span>Facilitator (npub)</span><span class="mono">npub1q7f…9m2c</span></div>
+        <div class="kv"><span>Trust proof</span><span class="pill ok">verified 14:11</span></div>
+        <div class="kv"><span>Delivery</span><span>Kreuzberg · 10999</span></div>
+      </div>
+      <p class="note">Honest limitation: the ring proof says who may settle the
+        order, not that the pizza arrives. Releasing the sats on delivery — not on
+        proof — is the part that protects you.</p>
+    </main>
+    <div class="nav"><div class="on">Pizza</div><div>Cinema</div><div>Charging</div><div>Set</div></div>
+  </div>
+  <div class="caption">6 · Order tracking + release — missing today</div>
+</section>
+
+<!-- ───────────────────────── 7 · BLOCKED ───────────────────────── -->
+<section class="screen" data-n="7">
+  <div class="tag new">NEW UI</div>
+  <div class="phone">
+    <div class="bar"><span>14:12</span><span>Berlin · 5G</span></div>
+    <div class="appbar"><h1>Order blocked</h1></div>
+    <main>
+      <div class="banner err">
+        <div style="font-weight:700;color:var(--err);font-size:15px">
+          Payment blocked — facilitator not in your trust set</div>
+        <p style="margin-top:6px;color:var(--text)">Anon Delivery could not present
+          a proof that any of <b>your</b> 8 trusted facilitators signed this order.
+          No valid proof, no order.</p>
+      </div>
+      <div class="card tight">
+        <h3>Reason from the verifier</h3>
+        <div class="mono">no valid proof for the pinned set
+3f9a…c41d — signature does not close over any
+subset of the 8 permitted keys</div>
+      </div>
+      <div class="card tight">
+        <h3>Your sats did not move</h3>
+        <div class="kv"><span>Invoice</span><span>not created</span></div>
+        <div class="kv"><span>Wallet balance</span><span class="sats">21,400 sats</span></div>
+        <div class="kv"><span>Basket</span><span>kept</span></div>
+      </div>
+      <div class="cta">
+        <button class="wide">Pick a vetted facilitator instead</button>
+        <div class="spacer"></div>
+        <button class="wide ghost">Add Anon Delivery to my trust set</button>
+      </div>
+    </main>
+  </div>
+  <div class="caption">7 · Rejection — NEW UI (each of the 4 attack cases maps here)</div>
+</section>
+
+<!-- ───────────────────────── 8 · FACILITATOR APP ───────────────────────── -->
+<section class="screen" data-n="8">
+  <div class="tag new">NEW UI · operator side</div>
+  <div class="phone">
+    <div class="bar"><span>14:11</span><span>Food Runners · online</span></div>
+    <div class="appbar"><h1>New order</h1><span class="wallet">+27,900 sats</span></div>
+    <main>
+      <div class="card tight">
+        <div class="kv"><span>Order</span><span>#PZ-4471 · 2 pizzas</span></div>
+        <div class="kv"><span>Pickup</span><span>Pizzeria Napoli, Kreuzberg</span></div>
+        <div class="kv"><span>Drop</span><span>10999 · 1.8 km</span></div>
+        <div class="kv"><span>Settle</span><span class="sats">27,900 sats on delivery</span></div>
+      </div>
+
+      <div class="card tight">
+        <h3>The buyer pinned this set</h3>
+        <div class="kv"><span>List</span><span>pizza-facilitators-berlin</span></div>
+        <div class="kv"><span>Version hash</span><span class="mono">3f9a…c41d</span></div>
+        <p style="margin-top:8px">Prove you are in it — without revealing which
+          member you are.</p>
+        <div class="ring" style="margin-top:10px">
+          <i class="you">you</i><i>·</i><i>·</i><i>·</i>
+        </div>
+        <p class="note" style="margin-top:8px">Ring of 4 drawn from their 8.
+          Your key image is locked to this order, one use.</p>
+      </div>
+
+      <div class="cta">
+        <button class="wide">Prove &amp; accept order</button>
+      </div>
+      <p class="note">After accepting: the invoice settles to your node, the
+        buyer sees “facilitator accepted”, and your key image for #PZ-4471 is spent.</p>
+    </main>
+  </div>
+  <div class="caption">8 · Facilitator app — NEW UI (no operator screen exists today)</div>
+</section>
+
+</div>
+
+<script>
+  // deterministic pseudo-QR so the mockup is stable between runs
+  (function drawQR() {
+    const c = document.getElementById('qr');
+    if (!c) return;
+    const ctx = c.getContext('2d'), N = 21;
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, N, N);
+    ctx.fillStyle = '#000';
+    let seed = 4471;
+    const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+    for (let y = 0; y < N; y++)
+      for (let x = 0; x < N; x++)
+        if (rnd() > 0.52) ctx.fillRect(x, y, 1, 1);
+    // finder patterns
+    [[0,0],[N-7,0],[0,N-7]].forEach(([ox,oy]) => {
+      ctx.fillStyle = '#fff'; ctx.fillRect(ox, oy, 7, 7);
+      ctx.fillStyle = '#000'; ctx.fillRect(ox, oy, 7, 7);
+      ctx.fillStyle = '#fff'; ctx.fillRect(ox+1, oy+1, 5, 5);
+      ctx.fillStyle = '#000'; ctx.fillRect(ox+2, oy+2, 3, 3);
+    });
+  })();
+
+  // ?s=N shows one screen full-bleed (for screenshots); no param = grid of all
+  const want = new URLSearchParams(location.search).get('s');
+  if (want) {
+    document.body.classList.add('one');
+    const el = document.querySelector('.screen[data-n="' + want + '"]');
+    if (el) el.classList.add('active');
+  } else {
+    document.querySelectorAll('.screen').forEach(el => el.classList.add('active'));
+  }
+</script>
+</body>
+</html>

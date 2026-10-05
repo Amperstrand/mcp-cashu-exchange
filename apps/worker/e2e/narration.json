@@ -1,0 +1,52 @@
+{
+  "_comment": "Narration for the narrated happy-path demo. Documentary-narrator register (deliberately NOT a cloned human voice - see deck disclaimer). Each beat's audio is synthesised with piper (en_GB-alan-medium) and placed at the beat's caption timestamp; holds are derived from the measured audio length, so the pacing follows the words.",
+  "voice": "en_GB-alan-medium",
+  "pad_seconds": 0.7,
+  "beats": [
+    {
+      "id": 1,
+      "caption": "Berlin. Pizzeria Napoli — a buyer, a facilitator, and a card.",
+      "text": "Berlin. Just after two in the afternoon. A pizzeria, a buyer, and a facilitator who will pay with his card."
+    },
+    {
+      "id": 2,
+      "caption": "The buyer's pinned trust set: 8 facilitators, pinned by content hash.",
+      "text": "The buyer holds a list of eight facilitators she has chosen to trust. She has pinned that list by its content hash, so nobody can quietly edit it in her pocket."
+    },
+    {
+      "id": 3,
+      "caption": "Order: 2 pizzas — 27,900 sats.",
+      "text": "Her order: two pizzas, twenty-seven thousand nine hundred sats. The restaurant never sees her money. The facilitator does."
+    },
+    {
+      "id": 4,
+      "caption": "She doesn't pick one. The order opens to the whole set — first valid proof wins.",
+      "text": "Now the delicate part. She does not pick one. She opens the order to the whole set, and the first member who can prove membership takes it."
+    },
+    {
+      "id": 5,
+      "caption": "VERIFIED — a member signed this exact order. Anonymity set = 4.",
+      "text": "He signs with a ring signature: four keys, his among them. The proof says that a member signed this exact order. It never says which one. Her anonymity set is four."
+    },
+    {
+      "id": 6,
+      "caption": "Attack: replay the honest proof onto a DIFFERENT order — refused.",
+      "text": "But a proof like this would be a bearer instrument, were it not bound to the order. Watch. We take the honest proof and offer it for a different order entirely. Refused. The signature covers the order itself, so a captured proof is worthless anywhere else."
+    },
+    {
+      "id": 7,
+      "caption": "A real invoice, issued by the mint — through the trust gate.",
+      "text": "Payment. The mint issues a real invoice, but only to a vendor whose proof checked out. No proof, no invoice."
+    },
+    {
+      "id": 8,
+      "caption": "PAID → buyer mints → token crosses → facilitator redeems → SPENT → kitchen.",
+      "text": "And when the mint reports the money is in, it carries on by itself. The buyer mints the ecash. The token crosses to the facilitator. He redeems it, and the mint confirms that her coins are spent. Only then does the kitchen receive the order."
+    },
+    {
+      "id": 9,
+      "caption": "Honest note: the test mint pays its own invoices. A real one simply waits.",
+      "text": "One honest note. The mint used for this demonstration pays its own invoices, which is what makes a paid leg watchable without funds. A real mint would simply wait. That is the whole happy path: trust decided by the buyer, membership proven without exposure, and money that moves only when it is real."
+    }
+  ]
+}
