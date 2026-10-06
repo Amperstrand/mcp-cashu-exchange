@@ -127,7 +127,7 @@ const doc = {
   members,
 };
 
-writeFileSync(out, JSON.stringify(doc, null, 2) + "\n");
+writeFileSync(out, `${JSON.stringify(doc, null, 2)}\n`);
 console.log(`wrote ${out}`);
 console.log(`${members.length} members — pubkeys only, no secrets`);
 console.log(`verify idx0: ${members[0].pubkey.slice(0, 24)}…`);

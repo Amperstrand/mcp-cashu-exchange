@@ -374,7 +374,7 @@ describe("verifyProofForMessage (the gateway seam, exchange#12)", () => {
     };
 
     // classic path: sign over orderMessage
-    const classic = prove(set, keys[1]!, [0, 1, 2, 3], order);
+    const classic = prove(set, at(keys, 1), [0, 1, 2, 3], order);
     expect(verifyProof(classic, set, pin, createSeenSet()).ok).toBe(true);
     expect(
       verifyProofForMessage(
@@ -393,7 +393,7 @@ describe("verifyProofForMessage (the gateway seam, exchange#12)", () => {
       fakeIntentMessage,
       keys.map((k) => k.publicKey),
       1,
-      keys[1]!.secretKey,
+      at(keys, 1).secretKey,
     );
     const proof = { ...classic, signature: sig };
     expect(
@@ -428,7 +428,7 @@ describe("minRingSize option (the 4-vs-16 convergence, exchange#12)", () => {
       expiresAt: new Date(Date.now() + 3600_000).toISOString(),
       pin,
     };
-    const proof = prove(set, keys[1]!, [0, 1, 2, 3], order);
+    const proof = prove(set, at(keys, 1), [0, 1, 2, 3], order);
     const msg = orderMessage(order);
     expect(
       verifyProofForMessage(msg, proof, set, pin, createSeenSet()).ok,
