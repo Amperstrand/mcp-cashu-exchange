@@ -5,7 +5,7 @@
  * page redeems it. Both sides run the REAL cashu-ts wallet — no mocks, no
  * server round trip — so the money path shown in the demo is the money path.
  */
-import { Mint, Wallet, getEncodedToken, sumProofs } from "@cashu/cashu-ts";
+import { getEncodedToken, Mint, sumProofs, Wallet } from "@cashu/cashu-ts";
 
 async function walletFor(mintUrl: string): Promise<Wallet> {
   const wallet = new Wallet(new Mint(mintUrl), { unit: "sat" });
@@ -26,7 +26,11 @@ function sats(value: any): number {
 }
 
 /** NUT-04 mint for an already-PAID quote; returns the token handed to the facilitator. */
-export async function mintEcash(mintUrl: string, amount: number, quoteId: string) {
+export async function mintEcash(
+  mintUrl: string,
+  amount: number,
+  quoteId: string,
+) {
   const wallet = await walletFor(mintUrl);
   const proofs = await wallet.mintProofsBolt11(amount, quoteId);
   const token = getEncodedToken({ mint: mintUrl, proofs });

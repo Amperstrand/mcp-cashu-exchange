@@ -36,14 +36,62 @@ const out = resolve(here, "..", "public", "facilitator-roster.json");
 export const DERIVATION_PREFIX = "mcp-cashu-pizza-demo/";
 
 const ROSTER = [
-  { label: "Food Runners Berlin", basis: "met-in-person", tier: "gold", deliveries: 312, rating: 4.9 },
-  { label: "Kreuzberg Couriers", basis: "vouched", tier: "silver", deliveries: 88, rating: 4.7 },
-  { label: "Mitte Bike Messengers", basis: "met-in-person", tier: "gold", deliveries: 205, rating: 4.8 },
-  { label: "Sole Delivery Co-op", basis: "vouched", tier: "silver", deliveries: 141, rating: 4.6 },
-  { label: "Neukölln Night Riders", basis: "vouched", tier: "silver", deliveries: 67, rating: 4.5 },
-  { label: "Prenzlauer Pedal", basis: "seed", tier: "bronze", deliveries: 12, rating: 4.4 },
-  { label: "Tempelhof Transit", basis: "seed", tier: "bronze", deliveries: 5, rating: 4.3 },
-  { label: "Charlottenburg Couriers", basis: "seed", tier: "bronze", deliveries: 3, rating: 4.2 },
+  {
+    label: "Food Runners Berlin",
+    basis: "met-in-person",
+    tier: "gold",
+    deliveries: 312,
+    rating: 4.9,
+  },
+  {
+    label: "Kreuzberg Couriers",
+    basis: "vouched",
+    tier: "silver",
+    deliveries: 88,
+    rating: 4.7,
+  },
+  {
+    label: "Mitte Bike Messengers",
+    basis: "met-in-person",
+    tier: "gold",
+    deliveries: 205,
+    rating: 4.8,
+  },
+  {
+    label: "Sole Delivery Co-op",
+    basis: "vouched",
+    tier: "silver",
+    deliveries: 141,
+    rating: 4.6,
+  },
+  {
+    label: "Neukölln Night Riders",
+    basis: "vouched",
+    tier: "silver",
+    deliveries: 67,
+    rating: 4.5,
+  },
+  {
+    label: "Prenzlauer Pedal",
+    basis: "seed",
+    tier: "bronze",
+    deliveries: 12,
+    rating: 4.4,
+  },
+  {
+    label: "Tempelhof Transit",
+    basis: "seed",
+    tier: "bronze",
+    deliveries: 5,
+    rating: 4.3,
+  },
+  {
+    label: "Charlottenburg Couriers",
+    basis: "seed",
+    tier: "bronze",
+    deliveries: 3,
+    rating: 4.2,
+  },
 ];
 
 export function deriveDemoKeys(idx: number) {
@@ -57,7 +105,9 @@ const members = ROSTER.map((r, i) => {
   return {
     idx: i,
     label: r.label,
-    pubkey: Array.from(publicKey, (b) => b.toString(16).padStart(2, "0")).join(""),
+    pubkey: Array.from(publicKey, (b) => b.toString(16).padStart(2, "0")).join(
+      "",
+    ),
     basis: r.basis,
     tier: r.tier,
     deliveries: r.deliveries,
@@ -69,7 +119,8 @@ const members = ROSTER.map((r, i) => {
 const doc = {
   _warning:
     "Demo fixture. Facilitator keys are DERIVED from the public constant in keyDerivation below — no private key is stored here and none should ever be. Throwaway by construction; never use for anything real.",
-  keyDerivation: 'secretKey = sha256("mcp-cashu-pizza-demo/" + idx); publicKey = secp256k1.getPublicKey(secretKey, true)',
+  keyDerivation:
+    'secretKey = sha256("mcp-cashu-pizza-demo/" + idx); publicKey = secp256k1.getPublicKey(secretKey, true)',
   setId: "pizza-facilitators-berlin",
   description: "Berlin pizza facilitators — vetted Q3 2026 (demo roster)",
   publishedAt: "2026-09-28T11:20:00Z",

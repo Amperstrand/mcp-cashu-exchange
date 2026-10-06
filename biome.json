@@ -5,8 +5,8 @@
       "**/*.ts",
       "**/*.json",
       "**/*.jsonc",
-      "!**/.wrangler/**",
-      "!**/dist/**"
+      "!**/.wrangler",
+      "!**/dist"
     ]
   },
   "formatter": {
