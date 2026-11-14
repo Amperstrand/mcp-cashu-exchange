@@ -9,7 +9,7 @@ Everything you will see is open-source and leak-gated.
 
 | # | Beat | What the audience sees | Fallback if live fails |
 |---|---|---|---|
-| 1 | Discovery | `curl mcp.cashu.exchange/api/services` — charging, cinema, food, federated parking | `npm run dev` locally, same call on :8787 |
+| 1 | Discovery | `curl <your-workers-dev-host>/api/services (the mcp.cashu.exchange domain claim was dropped 2026-10-05; workers.dev default — see commit "defuse the domain footgun")` — charging, cinema, food, federated parking | `npm run dev` locally, same call on :8787 |
 | 2 | Pay for cinema with ecash | /berlin chat → offer → pay with a Testnut Cashu token → settled | Pre-captured screenshot of the settled offer |
 | 3 | Real food, real venue | `npx jamezz menu 8613S3X` — the live Burgermeister Mehringdamm menu with EUR prices | Terminal recording (the CLI output is text) |
 | 4 | Customer-facing POS | Numo on the phone: Burgermeister catalog, customer pays Cashu tap-2-pay (Testnut mint) | Emulator on the projector; or the Lightning QR tab |

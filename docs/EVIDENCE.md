@@ -12,7 +12,7 @@ pre-`33e5343` build (deploy token pending, issue #1) — see
 
 | Claim | Verify |
 |---|---|
-| Exchange healthy | `curl mcp.cashu.exchange/health` → `{"ok":true,...,"version":"0.0.1"}` (re-verified at snapshot time) |
+| Exchange healthy | `curl <your-workers-dev-host>/health (domain claim dropped 2026-10-05)` → `{"ok":true,...,"version":"0.0.1"}` (re-verified at snapshot time) |
 | 5 MCP tools live | `POST /mcp` `tools/list` → directory, gateway, berlin-charging, cinema, payment.quote (re-verified at snapshot time) |
 | Federated parking answers | `tools/call gateway.list_downstreams` → europark-mcp with `parking.search`, `parking.details` |
 | Cinema chat settles Cashu | open `/berlin`, pay an offer with a Testnut token (verified 2026-10-01, recorded in LIVE.md) |
