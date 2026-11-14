@@ -1,0 +1,15 @@
+# 2026-11-14: end the ungrouped weekly churn (owner decision, green-PR
+# interview). npm ecosystem updates arrive GROUPED at most weekly; the
+# security stream stays immediate via Dependabot alerts regardless.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      npm-dependencies:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "build(deps)"
