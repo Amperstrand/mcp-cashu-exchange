@@ -13,9 +13,17 @@ text — assertions come from `window.__buyer.verdict`, `.checks`, `.attacks`.
 ## Run
 
 ```bash
-~/.hermes/hermes-agent/venv/bin/python apps/worker/e2e/test_pizza_flow.py
-~/.hermes/hermes-agent/venv/bin/python apps/worker/e2e/record_demo.py
+# one-time bootstrap (repo-local venv — never a private workstation path):
+python3 -m venv .venv
+.venv/bin/python -m pip install playwright && .venv/bin/python -m playwright install chromium
+
+.venv/bin/python apps/worker/e2e/test_pizza_flow.py
+.venv/bin/python apps/worker/e2e/record_demo.py
 ```
+
+Any Python with the `playwright` package works (`pip install playwright &&
+python -m playwright install chromium`); the venv above just keeps it
+repository-local and reproducible.
 
 Both scripts are self-contained: they start their own `http.server` on
 `127.0.0.1` and their own headless Chrome, then clean both up. Nothing needs to

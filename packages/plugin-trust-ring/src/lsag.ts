@@ -8,19 +8,23 @@
  *   G      — base point of secp256k1
  *   P_i    — public key of ring member i  (P_i = x_i * G)
  *   H(.)   — hash-to-curve (deterministic map from bytes to a curve point)
- *   I      — key image of the signer: I = x_s * H(P_s)
+ *   I      — key image of the signer: I = x_s * H(m, P_s)
+ *            The message is domain-separated into the hash (issue #24):
+ *            the same signer derives a DIFFERENT key image per order, so
+ *            observers cannot link proofs across orders. Double-spend
+ *            dedup keys on (order, keyImage) instead.
  *   c_i    — challenge at position i
  *   r_i    — response at position i
  *
  * Sign (signer index s, secret key x_s, ring P_0..P_{n-1}, message m):
- *   1. I = x_s * H(P_s)
- *   2. pick random r_s;  c_{s+1} = H(m, r_s*G, r_s*H(P_s))
+ *   1. I = x_s * H(m, P_s)
+ *   2. pick random r_s;  c_{s+1} = H(m, r_s*G, r_s*H(m, P_s))
  *   3. for i = s+1, s+2, ..., s-1 (wrapping mod n), i != s:
- *        pick random r_i;  c_{i+1} = H(m, r_i*G + c_i*P_i, r_i*H(P_i) + c_i*I)
+ *        pick random r_i;  c_{i+1} = H(m, r_i*G + c_i*P_i, r_i*H(m, P_i) + c_i*I)
  *   4. close the ring: set r_s = r_s_random - x_s * c_s  (mod n)
  *
  * Verify (message m, ring P_0..P_{n-1}, signature (I, c_0, r_0..r_{n-1})):
- *   for each i:  c_{i+1} = H(m, r_i*G + c_i*P_i, r_i*H(P_i) + c_i*I)
+ *   for each i:  c_{i+1} = H(m, r_i*G + c_i*P_i, r_i*H(m, P_i) + c_i*I)
  *   accept iff c_n == c_0  and I is a valid non-identity point.
  *
  * CRITICAL: r_i multiplies the generators (G, H(P_i)); c_i multiplies the
@@ -119,7 +123,7 @@ export function generateKeyPair(): KeyPair {
 }
 
 export interface LSAGSignature {
-  /** Key image I = x_s * H(P_s), 33 bytes compressed. */
+  /** Key image I = x_s * H(m, P_s), 33 bytes compressed (per-order). */
   keyImage: Uint8Array;
   /** c0 — the starting challenge, 32 bytes. */
   c0: Uint8Array;
@@ -128,13 +132,16 @@ export interface LSAGSignature {
 }
 
 /**
- * Per-link challenge: c_{i+1} = H(m, r_i*G + c_i*P_i, r_i*H(P_i) + c_i*I)
+ * Per-link challenge: c_{i+1} = H(m, r_i*G + c_i*P_i, r_i*H(m, P_i) + c_i*I)
  *
- * r_i multiplies the generators (G, H(P_i)); c_i multiplies the public
+ * r_i multiplies the generators (G, H(m, P_i)); c_i multiplies the public
  * keys (P_i, I). This ordering is what makes the ring close: at the signer
- * index s, with r_s = r_s_random - c_s*x_s and P_s = x_s*G, I = x_s*H(P_s),
+ * index s, with r_s = r_s_random - c_s*x_s and P_s = x_s*G, I = x_s*H(m, P_s),
  * the c_s*x_s terms cancel and verify recomputes c_{s+1} = H(m, r_s_random*G,
- * r_s_random*H(P_s)) — exactly what the signer stored.
+ * r_s_random*H(m, P_s)) — exactly what the signer stored.
+ *
+ * H is domain-separated by the message (issue #24): the same signer derives
+ * a different key image per order, preventing cross-order linkage.
  */
 function linkChallenge(
   message: Uint8Array,
@@ -173,10 +180,10 @@ export function sign(
   const s = signerIndex;
   const x_s = bytesToNumberBE(secretKey) % CURVE_ORDER;
 
-  // Precompute H(P_i) for every ring member.
-  const H = ring.map((pk) => hashToCurve(pk));
+  // Precompute H(m, P_i) for every ring member (domain-separated per order).
+  const H = ring.map((pk) => hashToCurve(concatBytes(message, pk)));
 
-  // Key image: I = x_s * H(P_s)
+  // Key image: I = x_s * H(m, P_s) — per-order (issue #24).
   const I = Point.fromBytes(req(H[s], "H[s] missing")).multiply(x_s).toBytes();
 
   // Random responses for all non-signer positions.
@@ -248,13 +255,13 @@ export function verify(
   }
   if (I.is0?.() ?? false) return false;
 
-  // Precompute H(P_i); each ring member must be a valid point.
+  // Precompute H(m, P_i); each ring member must be a valid point.
   const H: Uint8Array[] = [];
   for (let i = 0; i < n; i++) {
     try {
       const pk = req(ring[i], "ring[i] missing");
       Point.fromBytes(pk).assertValidity();
-      H.push(hashToCurve(pk));
+      H.push(hashToCurve(concatBytes(message, pk)));
     } catch {
       return false;
     }

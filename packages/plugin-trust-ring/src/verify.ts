@@ -135,13 +135,25 @@ export function verifyProofForMessage(
     };
   }
 
-  // 1. Ring must be an exact subset of the pinned trust set.
-  const setKeys = new Set(trustSet.members.map((m) => bytesToHex(m.publicKey)));
+  // 1. Ring must be an exact subset of the pinned trust set — counting only
+  //    members whose membership has not expired (issue #22). An expired
+  //    member's key must not vouch for quotes indefinitely.
+  const checkedAt = new Date();
+  const activeKeys = new Set(
+    trustSet.members
+      .filter((m) => {
+        if (m.expiresAt === undefined) return true;
+        const expiry = new Date(m.expiresAt);
+        return !Number.isNaN(expiry.getTime()) && checkedAt < expiry;
+      })
+      .map((m) => bytesToHex(m.publicKey)),
+  );
   for (const pk of proof.ring) {
-    if (!setKeys.has(bytesToHex(pk))) {
+    if (!activeKeys.has(bytesToHex(pk))) {
       return {
         ok: false,
-        reason: "ring contains a key outside the pinned trust set",
+        reason:
+          "ring contains a key outside the pinned trust set (or an expired member)",
       };
     }
   }

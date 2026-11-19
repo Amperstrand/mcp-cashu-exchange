@@ -124,6 +124,13 @@
 (() => {
   const T = window.__trustRing;
   const CH = new BroadcastChannel("pizza-trust-demo");
+  // Claim ticket (issue #23): this page's private nonce. The buyer hands the
+  // ecash token over on a per-order channel named with the WINNER's ticket —
+  // rejected/late claimants never see the token, so they cannot race the
+  // accepted facilitator to spend it. The ticket is also checked on receipt
+  // (defense in depth): this page only ever redeems a token addressed to it.
+  const CLAIM_TICKET = crypto.randomUUID().replace(/-/g, "");
+  let HANDOFF = null; // winner-specific channel, created when the order arrives
   const $ = (s) => document.querySelector(s);
   const hexToBytes = (h) => Uint8Array.from(h.match(/../g), (b) => parseInt(b, 16));
   const short = (h, n = 10) => h.slice(0, n) + "…";
@@ -239,7 +246,7 @@
       $("#p-bind").textContent = `${order.orderId} · ${order.amount} ${order.currency}`;
       $("#payout").textContent = "+" + Number(order.amount).toLocaleString("en-US") + " sats";
     }
-    CH.postMessage({ type: "PROOF", proof, label });
+    CH.postMessage({ type: "PROOF", proof, label, claimTicket: CLAIM_TICKET });
   }
 
   CH.addEventListener("message", (e) => {
@@ -249,6 +256,26 @@
       state.order = m.order;
       state.openOrder = m.open === true;   // an open order: no counterparty is named
       state.trustSet = m.trustSet;
+      // Subscribe to the winner-specific handoff channel for THIS order (issue
+      // #23): named with our claim ticket, so the buyer can address exactly
+      // one claimant. The shared channel below never carries the token.
+      if (HANDOFF) HANDOFF.close();
+      HANDOFF = new BroadcastChannel(
+        "pizza-trust-demo/handoff/" + m.order.orderId + "/" + CLAIM_TICKET,
+      );
+      HANDOFF.addEventListener("message", (ev) => {
+        const t = ev.data;
+        if (t.type === "TOKEN") {
+          if (t.claimTicket !== CLAIM_TICKET || t.orderId !== state.order?.orderId) {
+            // Not addressed to this page — never redeem (issue #23).
+            state.tokenRejected = { orderId: t.orderId, addressed: t.claimTicket };
+            return;
+          }
+          state.token = t.token;
+          state.redeemedTotal = null;
+          redeemToken(t.token);
+        }
+      });
       $("#noorder").classList.add("hide");
       $("#order").classList.remove("hide");
       $("#o-id").textContent = `#${m.order.orderId} · 2 pizzas`;
@@ -264,9 +291,10 @@
     }
     if (m.type === "PAID") { state.paid = true; }
     if (m.type === "TOKEN") {
-      state.token = m.token;
-      state.redeemedTotal = null;
-      redeemToken(m.token);
+      // The token NEVER rides the origin-wide channel (issue #23): a TOKEN
+      // seen here would be a protocol violation — refuse it outright.
+      state.tokenRejected = { orderId: m.orderId, addressed: m.claimTicket ?? null };
+      return;
     }
   });
 
