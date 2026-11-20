@@ -67,6 +67,17 @@ export function withTrustGate(
       if (!result.ok) {
         throw new Error(`trust-ring proof rejected: ${result.reason}`);
       }
+      // The proof binds the order it was issued for: a 1-sat proof must not
+      // authorize a 27,900-sat invoice (issue #22). Compare amount AND
+      // currency with the signed order context before forwarding.
+      if (
+        amount.amount !== proof.order.amount ||
+        amount.currency !== proof.order.currency
+      ) {
+        throw new Error(
+          `trust-ring proof order mismatch: proof binds ${proof.order.amount} ${proof.order.currency}, quote requested ${amount.amount} ${amount.currency}`,
+        );
+      }
       return rail.quote(amount);
     },
     pay: (quote: PaymentQuote): Promise<PaymentResult> => rail.pay(quote),

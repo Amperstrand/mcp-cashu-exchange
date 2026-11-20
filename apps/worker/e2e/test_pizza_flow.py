@@ -19,7 +19,7 @@ Covers:
 Toolchain note (this box): `npx playwright install chromium` refuses on Ubuntu
 26.04 and `chromium.launch(executable_path=...)` HANGS. So this script starts
 Chrome itself and attaches over CDP. Run with the Hermes venv python:
-    ~/.hermes/hermes-agent/venv/bin/python apps/worker/e2e/test_pizza_flow.py
+    .venv/bin/python apps/worker/e2e/test_pizza_flow.py
 """
 import json
 import os

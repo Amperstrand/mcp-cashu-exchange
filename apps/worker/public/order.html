@@ -449,6 +449,10 @@
     if (result.ok) {
       state.claimed = true;
       state.claiming = false;
+      // The winning claimant's ticket (issue #23): the ecash handoff goes to a
+      // channel named with exactly this nonce, so rejected/late claimants
+      // cannot race the winner to spend the buyer's funds.
+      state.winnerTicket = msg.claimTicket;
       state.counterpartyIdentity = null;
       $("#vet-banner").className = "banner ok center";
       $("#vet-banner").innerHTML = `VERIFIED — a member of your trust set signed this order.<br>
@@ -618,8 +622,16 @@
       state.token = minted.token;
       state.mintedTotal = minted.total;
       state.mintedProofs = minted.proofCount;
-      CH.postMessage({ type: "TOKEN", orderId: ORDER.orderId, token: minted.token, total: minted.total });
-      mintLegLine(`${minted.total} sat ecash minted (${minted.proofCount} proofs) → handed to the facilitator`);
+      // Winner-specific handoff (issue #23): the token goes ONLY to the
+      // per-order channel named with the accepted claimant's ticket — not the
+      // origin-wide broadcast, where every facilitator page would redeem it.
+      if (!state.winnerTicket) throw new Error("no accepted claimant ticket — refusing to hand off the token");
+      const HANDOFF = new BroadcastChannel(
+        "pizza-trust-demo/handoff/" + ORDER.orderId + "/" + state.winnerTicket,
+      );
+      HANDOFF.postMessage({ type: "TOKEN", orderId: ORDER.orderId, claimTicket: state.winnerTicket, token: minted.token, total: minted.total });
+      HANDOFF.close();
+      mintLegLine(`${minted.total} sat ecash minted (${minted.proofCount} proofs) → handed to the accepted facilitator`);
     } catch (err) {
       state.settleError = err.message || String(err);
       mintLegLine(`minting failed: ${state.settleError}`);

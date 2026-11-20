@@ -1,4 +1,6 @@
+import { railId } from "@exchange/contracts";
 import { describe, expect, it } from "vitest";
+import { withTrustGate } from "../src/gate.ts";
 import type { KeyPair } from "../src/lsag.ts";
 import { generateKeyPair, verify as lsagVerify, sign } from "../src/lsag.ts";
 import type { OrderContext, TrustProof } from "../src/prove.ts";
@@ -438,5 +440,104 @@ describe("minRingSize option (the 4-vs-16 convergence, exchange#12)", () => {
     });
     expect(tight.ok).toBe(false);
     expect((tight as { reason: string }).reason).toContain("below minimum 16");
+  });
+});
+
+// ── Issue #22/#24 regression tests (review-debt wave, tracker #141) ──
+
+describe("cross-order key-image unlinkability (#24)", {
+  timeout: 30000,
+}, () => {
+  it("same signer produces DIFFERENT key images for different orders", () => {
+    const keys = [
+      generateKeyPair(),
+      generateKeyPair(),
+      generateKeyPair(),
+      generateKeyPair(),
+    ];
+    const ring = keys.map((k) => k.publicKey);
+    const msgA = new TextEncoder().encode("order-A");
+    const msgB = new TextEncoder().encode("order-B");
+    const sigA = sign(msgA, ring, 1, secretKey(keys, 1));
+    const sigB = sign(msgB, ring, 1, secretKey(keys, 1));
+    expect(sigA.keyImage).not.toEqual(sigB.keyImage);
+    expect(lsagVerify(msgA, ring, sigA)).toBe(true);
+    expect(lsagVerify(msgB, ring, sigB)).toBe(true);
+  });
+});
+
+describe("expired-member filtering (#22)", { timeout: 30000 }, () => {
+  it("rejects a ring containing an expired member's key", () => {
+    const N = 8;
+    const { set, keys, pin } = buildTrustSet(N);
+    // Member 5's membership expired yesterday.
+    const expiredSet: TrustSet = {
+      ...set,
+      members: set.members.map((m, i) =>
+        i === 5 ? { ...m, expiresAt: "2020-01-01T00:00:00Z" } : m,
+      ),
+    };
+    // NOTE: expiresAt is not part of the content hash, so the pin still
+    // matches (that is the point: expiry is a live check, not a pin check).
+    const order = makeOrder(pin);
+    const ringIndices = [0, 3, 5, 7];
+    const proof = prove(expiredSet, at(keys, 3), ringIndices, order);
+    const result = verifyProof(proof, expiredSet, pin, createSeenSet());
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toContain("expired member");
+    }
+  });
+
+  it("accepts the same ring when every membership is current", () => {
+    const N = 8;
+    const { set, keys, pin } = buildTrustSet(N);
+    const order = makeOrder(pin);
+    const ringIndices = [0, 3, 5, 7];
+    const proof = prove(set, at(keys, 3), ringIndices, order);
+    const result = verifyProof(proof, set, pin, createSeenSet());
+    expect(result.ok).toBe(true);
+  });
+});
+
+describe("gate quote-amount binding (#22)", { timeout: 30000 }, () => {
+  it("refuses a quote whose amount is not the proof's bound order", async () => {
+    const { set, keys, pin } = buildTrustSet(8);
+    const order = makeOrder(pin); // binds 15.00 EUR
+    const quotes: unknown[] = [];
+    const rail = {
+      id: railId("test-rail"),
+      kind: "cashu" as const,
+      displayName: "Test Rail",
+      quote: async (amount: { amount: string; currency: string }) => {
+        quotes.push(amount);
+        return {
+          railId: railId("test-rail"),
+          kind: "cashu" as const,
+          amount,
+          instructions: "test",
+        };
+      },
+      pay: async () => ({ status: "settled" as const, reference: "r1" }),
+    };
+    const mkGated = () =>
+      withTrustGate(rail, { pin, trustSet: set, seen: createSeenSet() });
+    // 1-sat proof must not authorize a 27,900-sat invoice.
+    await expect(
+      mkGated().quote(
+        { amount: "27,900", currency: "sats" },
+        prove(set, at(keys, 3), [0, 3, 5, 7], order),
+      ),
+    ).rejects.toThrow("order mismatch");
+    expect(quotes).toEqual([]);
+    // The bound amount forwards (fresh proof/seen — one-use enforcement).
+    const q = await mkGated().quote(
+      { amount: order.amount, currency: order.currency },
+      prove(set, at(keys, 3), [0, 3, 5, 7], order),
+    );
+    expect(q.amount).toEqual({
+      amount: order.amount,
+      currency: order.currency,
+    });
   });
 });

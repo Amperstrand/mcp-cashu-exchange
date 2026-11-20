@@ -10,7 +10,7 @@ BroadcastChannel between them, one recording. Nothing is mocked or replayed.
 
 Paces the beats so a human can follow (~75s) and captions each step.
 
-    ~/.hermes/hermes-agent/venv/bin/python apps/worker/e2e/record_demo.py
+    .venv/bin/python apps/worker/e2e/record_demo.py
 """
 import shutil
 import socket
